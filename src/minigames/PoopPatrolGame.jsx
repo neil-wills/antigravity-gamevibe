@@ -18,6 +18,7 @@ export default function PoopPatrolGame({
   const [gameWon, setGameWon] = useState(false);
   const [gameResetCount, setGameResetCount] = useState(0);
   const [barkBubble, setBarkBubble] = useState(null);
+  const [showDpad, setShowDpad] = useState(false);
 
   const handleDogBark = (e) => {
     if (e) e.stopPropagation();
@@ -382,16 +383,8 @@ export default function PoopPatrolGame({
           // Center crosshair dot
           ctx.fillStyle = '#ef4444';
           ctx.beginPath();
-          ctx.arc(ms.target.x, ms.target.y, 4, 0, Math.PI * 2);
+          ctx.arc(ms.target.x, ms.target.y, 3.5, 0, Math.PI * 2);
           ctx.fill();
-
-          ctx.font = 'bold 11px Fredoka, sans-serif';
-          ctx.fillStyle = '#ffffff';
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 2.5;
-          ctx.textAlign = 'center';
-          ctx.strokeText('🎯 MOW HERE', ms.target.x, ms.target.y - 18);
-          ctx.fillText('🎯 MOW HERE', ms.target.x, ms.target.y - 18);
           ctx.restore();
         }
 
@@ -648,31 +641,6 @@ export default function PoopPatrolGame({
           />
         </div>
 
-        {/* Instruction Footer */}
-        {!gameWon && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 8,
-              left: 12,
-              background: 'rgba(255,255,255,0.94)',
-              backdropFilter: 'blur(8px)',
-              padding: '5px 16px',
-              borderRadius: '16px',
-              fontSize: '0.82rem',
-              fontFamily: 'Fredoka, sans-serif',
-              fontWeight: 600,
-              color: '#333',
-              pointerEvents: 'none',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            }}
-          >
-            {mode === 'mower'
-              ? '💥 Point & click anywhere (or use Arrows/WASD) to steer the lawnmower & EXPLODE poops!'
-              : '👆 Tap the poops with your scooper to clean up all 10!'}
-          </div>
-        )}
-
         {/* Goal Accomplished / Victory Overlay */}
         {gameWon && (
           <div className="victory-overlay">
@@ -701,43 +669,65 @@ export default function PoopPatrolGame({
             </div>
           </div>
         )}
+      </div>
 
-        {/* Mobile Virtual D-Pad for Ride-Along Mower */}
+      {/* Garden Status Dock - Located completely OUTSIDE the grass arena! */}
+      <div className="garden-status-dock">
+        <div className="garden-info-pill">
+          <span>🌱 Lawn:</span>
+          <span style={{ color: '#16a34a' }}>{grassMowedPct}% Mowed</span>
+        </div>
+
+        <div className="garden-instruction-text">
+          {mode === 'mower'
+            ? '🚜 Click or drag grass to drive mower • Arrow Keys / WASD also work!'
+            : '🧹 Tap poops to scoop them up!'}
+        </div>
+
         {mode === 'mower' && !gameWon && (
-          <div className="virtual-controls">
-            <div className="dpad-container">
-              <button
-                className="dpad-btn dpad-up"
-                onPointerDown={() => handleVirtualDir('arrowup', true)}
-                onPointerUp={() => handleVirtualDir('arrowup', false)}
-              >
-                ▲
-              </button>
-              <button
-                className="dpad-btn dpad-left"
-                onPointerDown={() => handleVirtualDir('arrowleft', true)}
-                onPointerUp={() => handleVirtualDir('arrowleft', false)}
-              >
-                ◀
-              </button>
-              <button
-                className="dpad-btn dpad-right"
-                onPointerDown={() => handleVirtualDir('arrowright', true)}
-                onPointerUp={() => handleVirtualDir('arrowright', false)}
-              >
-                ▶
-              </button>
-              <button
-                className="dpad-btn dpad-down"
-                onPointerDown={() => handleVirtualDir('arrowdown', true)}
-                onPointerUp={() => handleVirtualDir('arrowdown', false)}
-              >
-                ▼
-              </button>
-            </div>
-          </div>
+          <button
+            className={`btn-dpad-toggle ${showDpad ? 'active' : ''}`}
+            onClick={() => setShowDpad(!showDpad)}
+            title="Toggle on-screen arrow buttons below the garden"
+          >
+            ⌨️ {showDpad ? 'Hide Arrows' : 'Show Arrows'}
+          </button>
         )}
       </div>
+
+      {/* Optional External D-Pad Dock Below the Canvas (Never obstructs the grass!) */}
+      {mode === 'mower' && showDpad && !gameWon && (
+        <div className="external-dpad-dock">
+          <button
+            className="dpad-btn"
+            onPointerDown={() => handleVirtualDir('arrowleft', true)}
+            onPointerUp={() => handleVirtualDir('arrowleft', false)}
+          >
+            ◀ Left
+          </button>
+          <button
+            className="dpad-btn"
+            onPointerDown={() => handleVirtualDir('arrowup', true)}
+            onPointerUp={() => handleVirtualDir('arrowup', false)}
+          >
+            ▲ Forward
+          </button>
+          <button
+            className="dpad-btn"
+            onPointerDown={() => handleVirtualDir('arrowdown', true)}
+            onPointerUp={() => handleVirtualDir('arrowdown', false)}
+          >
+            ▼ Reverse
+          </button>
+          <button
+            className="dpad-btn"
+            onPointerDown={() => handleVirtualDir('arrowright', true)}
+            onPointerUp={() => handleVirtualDir('arrowright', false)}
+          >
+            Right ▶
+          </button>
+        </div>
+      )}
     </div>
   );
 }

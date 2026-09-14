@@ -315,3 +315,108 @@
     display: none;
   }
 }
+
+/* =========================================
+   Garden Poop Patrol Clean Status Dock
+   (Positioned cleanly OUTSIDE the grass arena!)
+   ========================================= */
+.garden-status-dock {
+  width: 100%;
+  max-width: 650px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-pill);
+  border: 2px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 20;
+}
+
+.garden-info-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: #333;
+  white-space: nowrap;
+}
+
+.garden-instruction-text {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.btn-dpad-toggle {
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-dpad-toggle:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.btn-dpad-toggle.active {
+  background: var(--primary-pink);
+  color: white;
+  border-color: var(--primary-pink);
+}
+
+/* External D-Pad Dock Below the Canvas (Never obstructs the grass!) */
+.external-dpad-dock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 4px;
+  z-index: 20;
+}
+
+.external-dpad-dock .dpad-btn {
+  background: white;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #334155;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  transition: all 0.15s;
+}
+
+.external-dpad-dock .dpad-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-2px);
+}
+
+.external-dpad-dock .dpad-btn:active {
+  background: #e2e8f0;
+  transform: translateY(1px);
+}

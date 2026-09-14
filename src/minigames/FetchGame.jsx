@@ -801,31 +801,6 @@ export default function FetchGame({
           />
         </div>
 
-        {/* Throw Guide Banner */}
-        {!gameWon && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 10,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'rgba(255,255,255,0.94)',
-              backdropFilter: 'blur(8px)',
-              padding: '5px 16px',
-              borderRadius: '20px',
-              fontSize: '0.85rem',
-              fontFamily: 'Fredoka, sans-serif',
-              fontWeight: 600,
-              color: '#444',
-              pointerEvents: 'none',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            🎯 Tap an Easy Throw button below or pull back & release the launcher!
-          </div>
-        )}
-
         {/* Victory Overlay when Goal is Accomplished */}
         {gameWon && (
           <div className="victory-overlay">
