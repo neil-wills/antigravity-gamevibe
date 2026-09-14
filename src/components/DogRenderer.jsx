@@ -124,16 +124,21 @@ export default function DogRenderer({
     return () => clearInterval(blinkInterval);
   }, []);
 
-  // Tail wag loop
+  // Tail wag loop - lively and smooth
   useEffect(() => {
     const wagInterval = setInterval(() => {
-      setTailTick((t) => (t + 1) % 4);
-    }, 180);
+      setTailTick((t) => (t + 1) % 6);
+    }, 110);
     return () => clearInterval(wagInterval);
   }, []);
 
-  const tailAngles = [-15, 0, 18, 5];
-  const currentTailAngle = state === 'eating' ? 25 : tailAngles[tailTick];
+  const tailAngles = [-24, -12, 10, 26, 14, -10];
+  const currentTailAngle =
+    state === 'eating'
+      ? 28
+      : state === 'walking'
+      ? tailAngles[tailTick] * 1.3
+      : tailAngles[tailTick];
 
   return (
     <div
@@ -179,47 +184,71 @@ export default function DogRenderer({
           />
         )}
 
-        {/* Tail */}
+        {/* Tail - Real graceful canine tail */}
         <g
           style={{
             transform: `rotate(${currentTailAngle}deg)`,
-            transformOrigin: '45px 105px',
-            transition: 'transform 0.12s ease-in-out',
+            transformOrigin: '48px 104px',
+            transition: 'transform 0.11s ease-in-out',
           }}
         >
           {breed.id === 'tuck' ? (
-            // Tuck's fluffy doodle curly tail (black with white fluffy tip)
-            <g>
+            // Tuck's fluffy doodle plume tail: upward curving with soft curls and snowy white tip!
+            <g id="tuckTail">
+              {/* Main curved tail plume */}
               <path
-                d="M 45 105 Q 20 85 28 65 Q 38 60 40 75 Q 35 95 45 105 Z"
+                d="M 48 104 C 34 98, 14 84, 12 58 C 12 42, 26 36, 34 46 C 38 56, 44 76, 54 96 Z"
                 fill="#1c1917"
               />
-              {/* Curly Doodle cloud puffs on Tuck's tail */}
-              <circle cx="28" cy="65" r="9" fill="#ffffff" />
-              <circle cx="34" cy="62" r="7" fill="#ffffff" />
-              <circle cx="23" cy="69" r="6" fill="#1c1917" />
+              {/* Fluffy fleece tufts along the curve */}
+              <circle cx="16" cy="74" r="7" fill="#1c1917" />
+              <circle cx="13" cy="62" r="8" fill="#1c1917" />
+              <circle cx="16" cy="50" r="8" fill="#1c1917" />
+              {/* Fluffy snowy white cloud tip */}
+              <path
+                d="M 16 52 C 16 36, 32 34, 35 46 C 37 54, 28 62, 21 60 Z"
+                fill="#ffffff"
+              />
+              <circle cx="23" cy="40" r="7.5" fill="#ffffff" />
+              <circle cx="31" cy="44" r="6.5" fill="#ffffff" />
+              <circle cx="27" cy="52" r="5.5" fill="#f8fafc" />
             </g>
           ) : breed.tailType === 'stub' ? (
-            // Corgi / Frenchie cute nub tail
-            <ellipse cx="40" cy="108" rx="8" ry="6" fill={breed.primaryColor} />
+            // Corgi / Frenchie cute wagging nub
+            <g id="stubTail">
+              <ellipse cx="38" cy="104" rx="10" ry="8" fill={breed.primaryColor} />
+              <circle cx="32" cy="100" r="5" fill="#ffffff" />
+            </g>
           ) : breed.tailType === 'curl' ? (
-            // Shiba curled donut tail
-            <path
-              d="M 45 105 C 30 90, 20 60, 40 60 C 50 60, 52 75, 42 85 Z"
-              fill={breed.primaryColor}
-            />
+            // Shiba curled sickle donut tail looping up over the hip
+            <g id="shibaTail">
+              <path
+                d="M 48 104 C 32 94, 16 70, 24 48 C 34 32, 54 40, 46 60 C 40 72, 36 86, 52 96 Z"
+                fill={breed.primaryColor}
+              />
+              <path
+                d="M 43 96 C 33 86, 22 68, 28 52 C 34 42, 46 48, 41 60 Z"
+                fill="#fff5eb"
+              />
+            </g>
           ) : breed.tailType === 'pom-pom' ? (
-            // Poodle tail with pom-pom
-            <g>
-              <path d="M 45 105 Q 30 90 28 75" stroke={breed.primaryColor} strokeWidth="5" strokeLinecap="round" />
-              <circle cx="28" cy="72" r="10" fill={breed.secondaryColor} />
+            // Poodle tail with fluffy pom-pom cloud
+            <g id="poodleTail">
+              <path d="M 47 104 Q 28 84 26 62" stroke={breed.primaryColor} strokeWidth="5.5" strokeLinecap="round" fill="none" />
+              <circle cx="26" cy="56" r="13" fill={breed.secondaryColor} stroke={breed.accentColor} strokeWidth="1.5" />
+              <circle cx="20" cy="52" r="7" fill={breed.secondaryColor} />
+              <circle cx="32" cy="52" r="7" fill={breed.secondaryColor} />
             </g>
           ) : (
-            // Barnaby Golden fluffy tail
-            <path
-              d="M 45 105 Q 15 90 20 70 Q 35 80 45 105 Z"
-              fill={breed.primaryColor}
-            />
+            // Barnaby Golden feathery retriever plume tail
+            <g id="goldenTail">
+              <path
+                d="M 48 104 C 32 96, 14 78, 12 54 C 14 42, 28 40, 34 52 C 36 66, 44 84, 53 96 Z"
+                fill={breed.primaryColor}
+              />
+              <path d="M 12 68 Q 5 60 14 54 Q 7 46 17 40 Q 26 36 32 46" fill={breed.accentColor} opacity="0.75" />
+              <circle cx="29" cy="46" r="6" fill={breed.primaryColor} />
+            </g>
           )}
         </g>
 
@@ -340,82 +369,92 @@ export default function DogRenderer({
 
             {/* Breed Head Specific Details */}
             {breed.id === 'tuck' && (
-              // Tuck's signature white doodle blaze down forehead & snout
-              <g>
-                {/* White forehead patch */}
+              // Tuck's signature fluffy doodle face with white blaze & cute cheek puffs
+              <g id="tuckFaceDetails">
+                {/* Fluffy white doodle cheeks & muzzle puffs */}
+                <ellipse cx="107" cy="74" rx="18" ry="14" fill="#ffffff" />
+                <ellipse cx="85" cy="74" rx="16" ry="14" fill="#ffffff" />
+
+                {/* White forehead flame blaze */}
                 <path
-                  d="M 96 42 Q 102 52 100 68 Q 96 74 92 68 Q 90 52 96 42 Z"
+                  d="M 96 38 Q 103 48 101 68 Q 96 74 91 68 Q 89 48 96 38 Z"
                   fill="#ffffff"
                 />
-                {/* White fluffy doodle cheeks & muzzle */}
-                <ellipse cx="106" cy="74" rx="16" ry="12" fill="#ffffff" />
-                <ellipse cx="88" cy="74" rx="14" ry="12" fill="#ffffff" />
-                {/* Black spot around left eye */}
-                <ellipse cx="86" cy="62" rx="8" ry="9" fill="#1c1917" />
-                {/* Fluffy wavy curl bumps on forehead */}
-                <circle cx="96" cy="39" r="6" fill="#f8fafc" />
-                <circle cx="88" cy="42" r="5" fill="#1c1917" />
-                <circle cx="104" cy="42" r="5" fill="#1c1917" />
+
+                {/* Cute black patch surrounding left eye - framing big cartoon eye */}
+                <ellipse cx="84" cy="61" rx="14.5" ry="15.5" fill="#1c1917" />
+
+                {/* Soft curly doodle texture bumps on forehead */}
+                <circle cx="96" cy="36" r="6.5" fill="#f8fafc" />
+                <circle cx="87" cy="39" r="5.5" fill="#1c1917" />
+                <circle cx="105" cy="39" r="5.5" fill="#1c1917" />
+                <circle cx="78" cy="46" r="4.5" fill="#1c1917" />
+                <circle cx="114" cy="46" r="4.5" fill="#1c1917" />
               </g>
             )}
 
             {breed.id === 'waffles' && (
               // Corgi white blaze
-              <path d="M 96 40 Q 99 54 96 68 Q 93 54 96 40 Z" fill="#ffffff" />
+              <path d="M 96 38 Q 100 52 96 68 Q 92 52 96 38 Z" fill="#ffffff" />
             )}
 
             {breed.id === 'mochi' && (
-              // Shiba white cheeks
+              // Shiba white cheeks & cute eyebrow dots
               <g>
-                <ellipse cx="80" cy="70" rx="10" ry="12" fill="#fff5eb" />
-                <ellipse cx="112" cy="70" rx="10" ry="12" fill="#fff5eb" />
-                {/* White eyebrow dots */}
-                <circle cx="87" cy="53" r="3.5" fill="#fff5eb" />
-                <circle cx="105" cy="53" r="3.5" fill="#fff5eb" />
+                <ellipse cx="78" cy="71" rx="12" ry="13" fill="#fff5eb" />
+                <ellipse cx="114" cy="71" rx="12" ry="13" fill="#fff5eb" />
+                <circle cx="84" cy="48" r="4" fill="#fff5eb" />
+                <circle cx="108" cy="48" r="4" fill="#fff5eb" />
               </g>
             )}
 
             {breed.id === 'coco' && (
               // Poodle curly topknot puff
               <g>
-                <circle cx="96" cy="38" r="14" fill={breed.secondaryColor} />
-                <circle cx="88" cy="40" r="11" fill={breed.secondaryColor} />
-                <circle cx="104" cy="40" r="11" fill={breed.secondaryColor} />
+                <circle cx="96" cy="36" r="15" fill={breed.secondaryColor} />
+                <circle cx="87" cy="39" r="12" fill={breed.secondaryColor} />
+                <circle cx="105" cy="39" r="12" fill={breed.secondaryColor} />
               </g>
             )}
 
+            {/* Rosy Blush Cheeks on all pups */}
+            <ellipse cx="73" cy="73" rx="5.5" ry="3.5" fill="#ff758f" opacity="0.55" />
+            <ellipse cx="119" cy="73" rx="5.5" ry="3.5" fill="#ff758f" opacity="0.55" />
+
             {/* Ears */}
             {breed.id === 'tuck' ? (
-              // Tuck's curly floppy doodle ears (rich black wavy ears framing face)
-              <g>
+              // Tuck's fluffy, wavy, floppy doodle ears framing his face like a sweet teddy bear
+              <g id="tuckEars">
                 {/* Left Ear */}
                 <path
-                  d="M 72 52 C 60 55, 55 80, 68 95 C 75 92, 78 80, 75 60 Z"
+                  d="M 72 50 C 58 54, 52 82, 66 98 C 74 95, 78 82, 75 58 Z"
                   fill="#1c1917"
                 />
-                <circle cx="64" cy="85" r="6" fill="#2c2a29" />
-                <circle cx="68" cy="95" r="5" fill="#1c1917" />
+                <circle cx="62" cy="74" r="7" fill="#2c2a29" />
+                <circle cx="64" cy="88" r="6.5" fill="#1c1917" />
+                <circle cx="68" cy="98" r="5.5" fill="#1c1917" />
                 {/* Right Ear */}
                 <path
-                  d="M 118 52 C 130 55, 134 80, 122 95 C 115 92, 112 80, 115 60 Z"
+                  d="M 120 50 C 134 54, 140 82, 126 98 C 118 95, 114 82, 117 58 Z"
                   fill="#1c1917"
                 />
-                <circle cx="126" cy="85" r="6" fill="#2c2a29" />
-                <circle cx="122" cy="95" r="5" fill="#1c1917" />
+                <circle cx="130" cy="74" r="7" fill="#2c2a29" />
+                <circle cx="128" cy="88" r="6.5" fill="#1c1917" />
+                <circle cx="124" cy="98" r="5.5" fill="#1c1917" />
               </g>
             ) : breed.earType === 'upright' || breed.earType === 'bat' ? (
               // Corgi / Frenchie Ears
               <g>
                 <path
-                  d="M 74 54 C 64 30, 72 16, 84 28 C 86 38, 82 50, 78 54 Z"
+                  d="M 74 54 C 64 28, 72 14, 85 26 C 87 36, 83 48, 78 54 Z"
                   fill={breed.primaryColor}
                 />
-                <path d="M 76 46 C 70 32, 75 24, 82 32 Z" fill="#ffccd5" />
+                <path d="M 76 45 C 70 30, 75 22, 83 30 Z" fill="#ffccd5" />
                 <path
-                  d="M 118 54 C 128 30, 120 16, 108 28 C 106 38, 110 50, 114 54 Z"
+                  d="M 118 54 C 128 28, 120 14, 107 26 C 105 36, 109 48, 114 54 Z"
                   fill={breed.primaryColor}
                 />
-                <path d="M 116 46 C 122 32, 117 24, 110 32 Z" fill="#ffccd5" />
+                <path d="M 116 45 C 122 30, 117 22, 109 30 Z" fill="#ffccd5" />
               </g>
             ) : breed.earType === 'prick' ? (
               // Shiba triangular prick ears
@@ -428,89 +467,114 @@ export default function DogRenderer({
             ) : (
               // Floppy retriever / poodle ears
               <g>
-                <path d="M 72 54 C 60 62, 60 85, 74 88 C 78 78, 76 64, 76 56 Z" fill={breed.accentColor} />
-                <path d="M 120 54 C 132 62, 132 85, 118 88 C 114 78, 116 64, 116 56 Z" fill={breed.accentColor} />
+                <path d="M 72 54 C 58 62, 58 88, 74 92 C 78 80, 76 64, 76 56 Z" fill={breed.accentColor} />
+                <path d="M 120 54 C 134 62, 134 88, 118 92 C 114 80, 116 64, 116 56 Z" fill={breed.accentColor} />
               </g>
             )}
 
-            {/* Eyes */}
+            {/* Expressive Cartoon Eyebrows */}
+            <g id="cartoonEyebrows">
+              <path d="M 76 47 Q 84 43 92 46" stroke="#1c1917" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+              <path d="M 100 46 Q 108 43 116 47" stroke="#1c1917" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+            </g>
+
+            {/* Big, Soulful Cartoon Eyes */}
             {state === 'eating' ? (
-              // Happy closed eye arches / heart eyes!
-              <g stroke="#ff3366" strokeWidth="3" strokeLinecap="round" fill="none">
-                <path d="M 82 62 Q 88 56 94 62" />
-                <path d="M 98 62 Q 104 56 110 62" />
+              // Happy closed anime eyes with hearts!
+              <g stroke="#ff3366" strokeWidth="3.4" strokeLinecap="round" fill="none">
+                <path d="M 75 62 Q 84 53 93 62" />
+                <path d="M 99 62 Q 108 53 117 62" />
               </g>
             ) : state === 'pooping' ? (
-              // Embarrassed wide / apologetic sideways eyes
+              // Goofy shocked cartoon eyes with tiny pupils & sweat drops
               <g>
-                <circle cx="87" cy="62" r="6" fill="#ffffff" stroke="#333" strokeWidth="2" />
-                <circle cx="89" cy="61" r="2.5" fill="#333" />
-                <circle cx="105" cy="62" r="6" fill="#ffffff" stroke="#333" strokeWidth="2" />
-                <circle cx="107" cy="61" r="2.5" fill="#333" />
+                <ellipse cx="84" cy="61" rx="9" ry="11" fill="#ffffff" stroke="#1c1917" strokeWidth="2" />
+                <circle cx="87" cy="60" r="3.2" fill="#1c1917" />
+                <ellipse cx="108" cy="61" rx="9" ry="11" fill="#ffffff" stroke="#1c1917" strokeWidth="2" />
+                <circle cx="111" cy="60" r="3.2" fill="#1c1917" />
                 {/* Blue sweat drop for comical embarrassment */}
-                <path d="M 115 48 C 113 44, 117 40, 117 40 C 117 40, 121 44, 119 48 C 118 50, 116 50, 115 48 Z" fill="#38bdf8" />
+                <path d="M 120 46 C 117 41, 122 36, 122 36 C 122 36, 127 41, 124 46 C 123 48, 121 48, 120 46 Z" fill="#38bdf8" />
               </g>
             ) : blink ? (
-              // Blinking eyes
-              <g stroke="#2b2b2b" strokeWidth="3" strokeLinecap="round">
-                <line x1="83" y1="62" x2="91" y2="62" />
-                <line x1="101" y1="62" x2="109" y2="62" />
+              // Blinking cartoon eyelids with cute lashes
+              <g stroke="#1c1917" strokeWidth="3" strokeLinecap="round">
+                <path d="M 75 61 Q 84 68 93 61" fill="none" />
+                <path d="M 99 61 Q 108 68 117 61" fill="none" />
               </g>
             ) : (
-              // Loving Puppy Eyes
-              <g>
-                <circle cx="87" cy="62" r="5" fill="#221811" />
-                <circle cx="85.5" cy="60.5" r="2" fill="#ffffff" />
-                <circle cx="105" cy="62" r="5" fill="#221811" />
-                <circle cx="103.5" cy="60.5" r="2" fill="#ffffff" />
+              // Big, glossy, soulful cartoon puppy eyes!
+              <g id="bigCartoonEyes">
+                {/* Left Eye */}
+                <ellipse cx="84" cy="61" rx="9.5" ry="11.5" fill="#ffffff" stroke="#1c1917" strokeWidth="1.8" />
+                <ellipse cx="84.5" cy="61.5" rx="7.2" ry="8.6" fill="#382216" />
+                <ellipse cx="85" cy="62" rx="5.2" ry="6.2" fill="#140d0a" />
+                {/* Amber warm reflection */}
+                <path d="M 79 63 C 81 68, 88 68, 90 63 C 88 66, 81 66, 79 63 Z" fill="#b45309" opacity="0.75" />
+                {/* Glossy Twinkle Catchlights */}
+                <circle cx="81.5" cy="57.5" r="3.2" fill="#ffffff" />
+                <circle cx="87.5" cy="65.5" r="1.6" fill="#ffffff" />
+                <circle cx="81.5" cy="64" r="0.9" fill="#ffffff" />
+
+                {/* Right Eye */}
+                <ellipse cx="108" cy="61" rx="9.5" ry="11.5" fill="#ffffff" stroke="#1c1917" strokeWidth="1.8" />
+                <ellipse cx="107.5" cy="61.5" rx="7.2" ry="8.6" fill="#382216" />
+                <ellipse cx="107" cy="62" rx="5.2" ry="6.2" fill="#140d0a" />
+                {/* Amber warm reflection */}
+                <path d="M 102 63 C 104 68, 111 68, 113 63 C 111 66, 104 66, 102 63 Z" fill="#b45309" opacity="0.75" />
+                {/* Glossy Twinkle Catchlights */}
+                <circle cx="104.5" cy="57.5" r="3.2" fill="#ffffff" />
+                <circle cx="110.5" cy="65.5" r="1.6" fill="#ffffff" />
+                <circle cx="104.5" cy="64" r="0.9" fill="#ffffff" />
               </g>
             )}
 
-            {/* Glasses Accessory */}
+            {/* Glasses Accessory (Proportioned to big cartoon eyes) */}
             {wardrobe.glasses === 'sunglasses' && (
               <g>
-                <rect x="80" y="56" width="16" height="12" rx="4" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
-                <rect x="96" y="56" width="16" height="12" rx="4" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
-                <line x1="94" y1="61" x2="98" y2="61" stroke="#3f3f46" strokeWidth="2" />
-                <line x1="82" y1="58" x2="86" y2="66" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-                <line x1="98" y1="58" x2="102" y2="66" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                <rect x="73" y="49" width="22" height="22" rx="6" fill="#18181b" stroke="#3f3f46" strokeWidth="1.8" />
+                <rect x="97" y="49" width="22" height="22" rx="6" fill="#18181b" stroke="#3f3f46" strokeWidth="1.8" />
+                <line x1="93" y1="58" x2="99" y2="58" stroke="#3f3f46" strokeWidth="3" />
+                <line x1="76" y1="52" x2="82" y2="67" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
+                <line x1="100" y1="52" x2="106" y2="67" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
               </g>
             )}
             {wardrobe.glasses === 'star_glasses' && (
-              <g fill="#ffbe0b" stroke="#d97706" strokeWidth="1.5">
-                <polygon points="88,54 91,60 97,60 92,64 94,70 88,66 82,70 84,64 79,60 85,60" />
-                <polygon points="104,54 107,60 113,60 108,64 110,70 104,66 98,70 100,64 95,60 101,60" />
-                <line x1="96" y1="61" x2="98" y2="61" stroke="#d97706" strokeWidth="2" />
+              <g fill="#ffbe0b" stroke="#d97706" strokeWidth="1.8">
+                <polygon points="84,48 88,57 98,57 90,63 93,73 84,67 75,73 78,63 70,57 80,57" />
+                <polygon points="108,48 112,57 122,57 114,63 117,73 108,67 99,73 102,63 94,57 104,57" />
+                <line x1="94" y1="60" x2="98" y2="60" stroke="#d97706" strokeWidth="2.5" />
               </g>
             )}
             {wardrobe.glasses === 'monocle' && (
               <g>
-                <circle cx="105" cy="62" r="8" fill="rgba(147, 197, 253, 0.25)" stroke="#eab308" strokeWidth="2" />
-                <path d="M 112 66 Q 116 80 112 90" stroke="#eab308" strokeWidth="1.5" fill="none" />
+                <circle cx="108" cy="61" r="10.5" fill="rgba(147, 197, 253, 0.25)" stroke="#eab308" strokeWidth="2.2" />
+                <path d="M 117 66 Q 121 82 116 92" stroke="#eab308" strokeWidth="1.8" fill="none" />
               </g>
             )}
 
             {/* Snout & Nose */}
-            <g>
-              <ellipse cx="96" cy="72" rx="11" ry="8" fill={breed.id === 'tuck' ? '#ffffff' : breed.secondaryColor} />
-              <path d="M 92 68 Q 96 66 100 68 Q 96 73 92 68 Z" fill="#18181b" />
-              <ellipse cx="96" cy="69" rx="4" ry="2.5" fill="#18181b" />
+            <g id="cuteSnout">
+              <ellipse cx="96" cy="72" rx="12" ry="9" fill={breed.id === 'tuck' ? '#ffffff' : breed.secondaryColor} />
+              <path d="M 91 68 Q 96 65 101 68 Q 96 74 91 68 Z" fill="#18181b" />
+              <ellipse cx="96" cy="69" rx="4.8" ry="3.2" fill="#18181b" />
+              {/* Cute shine reflection on button nose */}
+              <ellipse cx="94.5" cy="67.5" rx="1.6" ry="1.1" fill="#ffffff" opacity="0.85" />
               
               {/* Mouth */}
               {state === 'pooping' ? (
                 // Wavy embarrassed squiggly mouth
-                <path d="M 91 76 Q 94 74 96 76 Q 98 78 101 76" stroke="#444" strokeWidth="2" strokeLinecap="round" fill="none" />
+                <path d="M 90 76 Q 93 73 96 76 Q 99 79 102 76" stroke="#444" strokeWidth="2.2" strokeLinecap="round" fill="none" />
               ) : state === 'eating' ? (
-                // Wide eating smile with tongue
+                // Wide happy eating smile with tongue
                 <g>
-                  <path d="M 90 74 Q 96 82 102 74" fill="#d90429" stroke="#333" strokeWidth="1.5" />
-                  <ellipse cx="96" cy="77" rx="3.5" ry="3" fill="#ff758f" />
+                  <path d="M 89 74 Q 96 84 103 74" fill="#d90429" stroke="#1c1917" strokeWidth="1.8" />
+                  <ellipse cx="96" cy="78" rx="4" ry="3.5" fill="#ff758f" />
                 </g>
               ) : (
-                // Happy resting smile with panting tongue
+                // Happy resting puppy smile with cute panting tongue
                 <g>
-                  <path d="M 93 73 Q 96 76 99 73" stroke="#2b2b2b" strokeWidth="2" strokeLinecap="round" fill="none" />
-                  <path d="M 94 74 Q 96 80 98 74 Z" fill="#ff758f" />
+                  <path d="M 92 73 Q 96 77 100 73" stroke="#2b2b2b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+                  <path d="M 93.5 74 Q 96 81 98.5 74 Z" fill="#ff758f" />
                 </g>
               )}
             </g>

@@ -323,7 +323,13 @@ export default function PoopPatrolGame({
     <div className="minigame-container">
       {/* Top HUD */}
       <div className="arcade-top-hud">
-        <button className="btn-action btn-secondary" onClick={onBack}>
+        <button
+          className="btn-action btn-secondary"
+          onClick={() => {
+            AudioFX.playPinSlide();
+            onBack();
+          }}
+        >
           ⬅ Back
         </button>
 
