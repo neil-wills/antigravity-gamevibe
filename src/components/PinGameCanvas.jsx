@@ -22,6 +22,7 @@ export default function PinGameCanvas({
   const [levelData, setLevelData] = useState(
     PUZZLE_LEVELS.find((l) => l.id === levelId) || PUZZLE_LEVELS[0]
   );
+  const [resetCount, setResetCount] = useState(0);
   const [kibbleInBowl, setKibbleInBowl] = useState(0);
   const [treatsInBowl, setTreatsInBowl] = useState(0);
   const [levelState, setLevelState] = useState('playing'); // 'playing' | 'victory' | 'failed'
@@ -34,7 +35,7 @@ export default function PinGameCanvas({
   // Active pin dragging state
   const dragPinRef = useRef(null);
 
-  // Update level when levelId changes
+  // Update level when levelId or resetCount changes
   useEffect(() => {
     const found = PUZZLE_LEVELS.find((l) => l.id === levelId) || PUZZLE_LEVELS[0];
     setLevelData(found);
@@ -45,7 +46,7 @@ export default function PinGameCanvas({
     setDogPos({ ...found.dog });
     setPawPrints([]);
     setPoopEvent(null);
-  }, [levelId]);
+  }, [levelId, resetCount]);
 
   // Trigger Random Poop Event during puzzle gameplay
   useEffect(() => {
@@ -548,7 +549,7 @@ export default function PinGameCanvas({
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [levelData]);
+  }, [levelData, resetCount]);
 
   // Check victory condition
   useEffect(() => {
@@ -599,11 +600,24 @@ export default function PinGameCanvas({
     AudioFX.playPinSlide();
     const nextId = levelData.id < PUZZLE_LEVELS.length ? levelData.id + 1 : 1;
     onSelectLevel(nextId);
+    setResetCount((c) => c + 1);
+    setLevelState('playing');
+    setKibbleInBowl(0);
+    setTreatsInBowl(0);
+    setDogState('idle');
+    setPoopEvent(null);
+    setPawPrints([]);
   };
 
   const handleRestart = () => {
     AudioFX.playPinSlide();
-    onSelectLevel(levelData.id);
+    setResetCount((c) => c + 1);
+    setLevelState('playing');
+    setKibbleInBowl(0);
+    setTreatsInBowl(0);
+    setDogState('idle');
+    setPoopEvent(null);
+    setPawPrints([]);
   };
 
   return (
@@ -771,12 +785,15 @@ export default function PinGameCanvas({
           <div className="victory-overlay">
             <div className="victory-title" style={{ color: '#e63946' }}>Oh No! Yuck! 🐾</div>
             <div className="victory-subtitle">
-              Mud contaminated the dog food! Let's try again!
+              Mud contaminated the dog food! What would you like to do?
             </div>
-            <div style={{ fontSize: '3rem', margin: '14px 0' }}>🥺</div>
-            <div className="victory-actions">
+            <div style={{ fontSize: '3.2rem', margin: '12px 0' }}>🥺</div>
+            <div className="victory-actions" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
               <button className="btn-action btn-primary" onClick={handleRestart}>
                 Try Again 🔄
+              </button>
+              <button className="btn-action btn-secondary" onClick={handleNextLevel}>
+                Skip Level ➔
               </button>
             </div>
           </div>

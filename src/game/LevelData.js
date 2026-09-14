@@ -90,19 +90,27 @@ export const PUZZLE_LEVELS = [
     id: 4,
     name: "The Mud Trap",
     difficulty: "easy",
-    tutorial: "Beware of red muddy sludge! Drain it away from the food bowl.",
+    tutorial: "Pull the LEFT pin first to drain the mud, then pull the RIGHT pin to feed Tuck!",
     bowl: { x: 280, y: 470, w: 90, h: 30 },
-    dog: { x: 130, y: 460 },
+    dog: { x: 195, y: 460 },
     pins: [
-      { id: "p1", x: 160, y: 220, length: 140, orientation: "horizontal", pullDir: "left" },
+      { id: "p1", x: 140, y: 220, length: 130, orientation: "horizontal", pullDir: "left" },
       { id: "p2", x: 280, y: 220, length: 130, orientation: "horizontal", pullDir: "right" },
     ],
     walls: [
-      { x: 80, y: 180, w: 16, h: 220 },
-      { x: 210, y: 230, w: 16, h: 260 },
-      { x: 340, y: 180, w: 16, h: 220 },
-      // Left mud drain pit
+      // Left outer wall
+      { x: 70, y: 180, w: 16, h: 220 },
+      // Solid central divider separating mud from food bowl completely
+      { x: 210, y: 260, w: 16, h: 360 },
+      // Right outer wall
+      { x: 350, y: 240, w: 16, h: 320 },
+      // Mud drain slide to the far left
+      { x: 120, y: 360, w: 120, h: 16, angle: 0.35 },
+      // Mud catch basin at bottom left
       { x: 50, y: 480, w: 80, h: 16 },
+      // Funnel directing food to bowl
+      { x: 235, y: 400, w: 16, h: 90, angle: -0.22 },
+      { x: 325, y: 400, w: 16, h: 90, angle: 0.22 },
     ],
     kibbles: [
       { x: 260, y: 100 }, { x: 280, y: 100 }, { x: 300, y: 100 },
@@ -112,10 +120,10 @@ export const PUZZLE_LEVELS = [
       { x: 280, y: 60 }
     ],
     hazards: [
-      // Mud balls in left chamber
-      { x: 130, y: 100, type: "mud" },
-      { x: 150, y: 100, type: "mud" },
-      { x: 140, y: 140, type: "mud" },
+      // Mud in left chamber
+      { x: 120, y: 100, type: "mud" },
+      { x: 140, y: 100, type: "mud" },
+      { x: 130, y: 140, type: "mud" },
     ],
     requiredKibble: 4,
   },
@@ -150,32 +158,36 @@ export const PUZZLE_LEVELS = [
   // --- MEDIUM LEVELS (6 - 10) ---
   {
     id: 6,
-    name: "Mud Neutralizer",
+    name: "Mud Trap II",
     difficulty: "medium",
-    tutorial: "Water clears toxic sludge into safe bubbling broth!",
-    bowl: { x: 200, y: 470, w: 90, h: 30 },
-    dog: { x: 80, y: 460 },
+    tutorial: "Drain the upper mud chamber to the side before opening the food gate!",
+    bowl: { x: 280, y: 470, w: 90, h: 30 },
+    dog: { x: 190, y: 460 },
     pins: [
-      { id: "p1", x: 150, y: 160, length: 130, orientation: "horizontal", pullDir: "left" },
-      { id: "p2", x: 250, y: 160, length: 130, orientation: "horizontal", pullDir: "right" },
-      { id: "p3", x: 200, y: 290, length: 170, orientation: "horizontal", pullDir: "left" },
+      { id: "p1", x: 140, y: 160, length: 120, orientation: "horizontal", pullDir: "left" },
+      { id: "p2", x: 280, y: 160, length: 120, orientation: "horizontal", pullDir: "right" },
+      { id: "p3", x: 280, y: 290, length: 140, orientation: "horizontal", pullDir: "left" },
     ],
     walls: [
-      { x: 80, y: 220, w: 16, h: 260 },
-      { x: 200, y: 100, w: 16, h: 130 },
-      { x: 320, y: 220, w: 16, h: 260 },
-      { x: 140, y: 390, w: 16, h: 130, angle: -0.35 },
-      { x: 260, y: 390, w: 16, h: 130, angle: 0.35 },
+      { x: 70, y: 200, w: 16, h: 260 },
+      { x: 210, y: 260, w: 16, h: 360 }, // Center barrier
+      { x: 350, y: 240, w: 16, h: 320 },
+      // Left mud drain slide
+      { x: 120, y: 280, w: 120, h: 16, angle: 0.35 },
+      { x: 50, y: 480, w: 80, h: 16 },
+      // Funnel to bowl
+      { x: 235, y: 400, w: 16, h: 90, angle: -0.22 },
+      { x: 325, y: 400, w: 16, h: 90, angle: 0.22 },
     ],
     kibbles: [
-      { x: 250, y: 80 }, { x: 270, y: 80 }, { x: 260, y: 110 }, { x: 280, y: 110 }
+      { x: 260, y: 80 }, { x: 280, y: 80 }, { x: 300, y: 80 }, { x: 270, y: 110 }
     ],
     treats: [
-      { x: 260, y: 50 }
+      { x: 280, y: 50 }
     ],
     hazards: [
-      { x: 140, y: 80, type: "mud" },
-      { x: 160, y: 80, type: "mud" }
+      { x: 130, y: 80, type: "mud" },
+      { x: 150, y: 80, type: "mud" }
     ],
     requiredKibble: 3,
   },
