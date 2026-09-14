@@ -129,10 +129,10 @@ export default function PinGameCanvas({
     setCurrentBowlX(newX);
     const bb = bowlBodyRef.current;
     if (bb) {
-      if (bb.sensor) Matter.Body.setPosition(bb.sensor, { x: newX, y: b.y - 4 });
+      if (bb.sensor) Matter.Body.setPosition(bb.sensor, { x: newX, y: b.y - 35 });
       if (bb.bottom) Matter.Body.setPosition(bb.bottom, { x: newX, y: b.y + b.h / 2 - 2 });
-      if (bb.left) Matter.Body.setPosition(bb.left, { x: newX - b.w / 2 + 4, y: b.y - 4 });
-      if (bb.right) Matter.Body.setPosition(bb.right, { x: newX + b.w / 2 - 4, y: b.y - 4 });
+      if (bb.left) Matter.Body.setPosition(bb.left, { x: newX - b.w / 2 + 3, y: b.y - 30 });
+      if (bb.right) Matter.Body.setPosition(bb.right, { x: newX + b.w / 2 - 3, y: b.y - 30 });
     }
   };
 
@@ -205,13 +205,13 @@ export default function PinGameCanvas({
       return bBody;
     });
 
-    // 2. Create Dog Food Bowl with Solid Basin & Collection Sensor (Movable!)
+    // 2. Create Dog Food Bowl with Solid Basin & Extended High-Stacking Walls (Movable!)
     const initialBowlPos = bowlPosRef.current;
     const bowlSensor = Bodies.rectangle(
       initialBowlPos.x,
-      initialBowlPos.y - 4,
-      initialBowlPos.w - 12,
-      initialBowlPos.h,
+      initialBowlPos.y - 35,
+      initialBowlPos.w + 6,
+      initialBowlPos.h + 80,
       {
         isStatic: true,
         isSensor: true,
@@ -231,10 +231,10 @@ export default function PinGameCanvas({
       }
     );
     const bowlLeftWall = Bodies.rectangle(
-      initialBowlPos.x - initialBowlPos.w / 2 + 4,
-      initialBowlPos.y - 4,
+      initialBowlPos.x - initialBowlPos.w / 2 + 3,
+      initialBowlPos.y - 30,
       8,
-      initialBowlPos.h + 6,
+      initialBowlPos.h + 60,
       {
         isStatic: true,
         label: 'bowlWall',
@@ -242,10 +242,10 @@ export default function PinGameCanvas({
       }
     );
     const bowlRightWall = Bodies.rectangle(
-      initialBowlPos.x + initialBowlPos.w / 2 - 4,
-      initialBowlPos.y - 4,
+      initialBowlPos.x + initialBowlPos.w / 2 - 3,
+      initialBowlPos.y - 30,
       8,
-      initialBowlPos.h + 6,
+      initialBowlPos.h + 60,
       {
         isStatic: true,
         label: 'bowlWall',
@@ -334,37 +334,104 @@ export default function PinGameCanvas({
     let collectedTreats = 0;
     const handledBodies = new Set();
 
+    // Stack slots representing an appetizing pyramid mound rising high out of the bowl
+    const stackSlots = [
+      // Layer 0: nestled in bottom basin of bowl (y: +4)
+      { x: -30, y: 4 },
+      { x: -15, y: 4 },
+      { x: 0, y: 4 },
+      { x: 15, y: 4 },
+      { x: 30, y: 4 },
+      // Layer 1: rim level (y: -8)
+      { x: -26, y: -8 },
+      { x: -13, y: -8 },
+      { x: 0, y: -8 },
+      { x: 13, y: -8 },
+      { x: 26, y: -8 },
+      // Layer 2: stacked high above the rim! (y: -20)
+      { x: -21, y: -20 },
+      { x: -10, y: -20 },
+      { x: 0, y: -20 },
+      { x: 10, y: -20 },
+      { x: 21, y: -20 },
+      // Layer 3: stacked higher! (y: -32)
+      { x: -16, y: -32 },
+      { x: -6, y: -32 },
+      { x: 6, y: -32 },
+      { x: 16, y: -32 },
+      // Layer 4: high pyramid peak! (y: -44)
+      { x: -11, y: -44 },
+      { x: 0, y: -44 },
+      { x: 11, y: -44 },
+      // Layer 5: mountain peak! (y: -56)
+      { x: -6, y: -56 },
+      { x: 6, y: -56 },
+      // Layer 6: summit (y: -68)
+      { x: 0, y: -68 },
+    ];
+
+    const catchKibble = (kibbleBody) => {
+      if (handledBodies.has(kibbleBody.id)) return;
+      handledBodies.add(kibbleBody.id);
+      collectedKibbles++;
+      setKibbleInBowl(collectedKibbles);
+      AudioFX.playKibbleDrop();
+      onAddPoints(10);
+
+      const curB = bowlPosRef.current;
+      const slot = stackSlots[(collectedKibbles - 1) % stackSlots.length];
+      const jitterX = (Math.random() - 0.5) * 3;
+      const jitterY = (Math.random() - 0.5) * 2;
+
+      kibbleBody.inBowl = true;
+      kibbleBody.bowlOffsetX = slot.x + jitterX;
+      kibbleBody.bowlOffsetY = slot.y + jitterY;
+      Body.setVelocity(kibbleBody, { x: 0, y: 0 });
+      Body.setStatic(kibbleBody, true);
+
+      // Check if ALL food in the level has been collected and stacked
+      if (collectedKibbles >= levelData.kibbles.length) {
+        AudioFX.playTreatBonus();
+        onAddPoints(100);
+        spawnFloatingText('🏆 ALL FOOD STACKED! +100', curB.x, curB.y - 70);
+      } else {
+        spawnFloatingText('+10', kibbleBody.position.x, kibbleBody.position.y - 12);
+      }
+    };
+
+    const catchTreat = (treatBody) => {
+      if (handledBodies.has(treatBody.id)) return;
+      handledBodies.add(treatBody.id);
+      collectedTreats++;
+      setTreatsInBowl(collectedTreats);
+      AudioFX.playTreatBonus();
+      onAddPoints(100);
+
+      const curB = bowlPosRef.current;
+      treatBody.inBowl = true;
+      // Golden bone crowns the top of the kibble stack!
+      const topHeight = Math.min(-20, -16 - (Math.floor(collectedKibbles / 4) * 12));
+      treatBody.bowlOffsetX = (collectedTreats % 2 === 1 ? -6 : 6);
+      treatBody.bowlOffsetY = topHeight;
+      Body.setVelocity(treatBody, { x: 0, y: 0 });
+      Body.setStatic(treatBody, true);
+      spawnFloatingText('⭐ +100 TREAT!', curB.x, curB.y - 80);
+    };
+
     Events.on(engine, 'collisionStart', (event) => {
       event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
         const checkBody = (target, other) => {
-          if ((target.label === 'bowlSensor' || target.label === 'bowlBottom') && !handledBodies.has(other.id)) {
-            const curB = bowlPosRef.current;
+          const targetIsBowl =
+            target.label === 'bowlSensor' ||
+            target.label === 'bowlBottom' ||
+            target.label === 'bowlWall' ||
+            target.inBowl;
+          if (targetIsBowl && !handledBodies.has(other.id)) {
             if (other.label === 'kibble') {
-              handledBodies.add(other.id);
-              collectedKibbles++;
-              setKibbleInBowl(collectedKibbles);
-              AudioFX.playKibbleDrop();
-              onAddPoints(10);
-              spawnFloatingText('+10', other.position.x, other.position.y - 10);
-              // Secure kibble inside the bowl so it never falls under
-              Body.setVelocity(other, { x: 0, y: 0 });
-              Body.setStatic(other, true);
-              other.inBowl = true;
-              other.bowlOffsetX = other.position.x - curB.x;
-              other.bowlOffsetY = Math.min(curB.h / 2 - 6, other.position.y - curB.y);
+              catchKibble(other);
             } else if (other.label === 'treat') {
-              handledBodies.add(other.id);
-              collectedTreats++;
-              setTreatsInBowl(collectedTreats);
-              AudioFX.playTreatBonus();
-              onAddPoints(100);
-              spawnFloatingText('⭐ +100 TREAT!', other.position.x, other.position.y - 15);
-              Body.setVelocity(other, { x: 0, y: 0 });
-              Body.setStatic(other, true);
-              other.inBowl = true;
-              other.bowlOffsetX = other.position.x - curB.x;
-              other.bowlOffsetY = Math.min(curB.h / 2 - 6, other.position.y - curB.y);
+              catchTreat(other);
             } else if (other.label === 'mud') {
               // Mud hit the bowl! Level failed!
               setLevelState('failed');
@@ -534,10 +601,10 @@ export default function PinGameCanvas({
         setCurrentBowlX(newX);
         const bb = bowlBodyRef.current;
         if (bb) {
-          if (bb.sensor) Body.setPosition(bb.sensor, { x: newX, y: b.y - 4 });
+          if (bb.sensor) Body.setPosition(bb.sensor, { x: newX, y: b.y - 35 });
           if (bb.bottom) Body.setPosition(bb.bottom, { x: newX, y: b.y + b.h / 2 - 2 });
-          if (bb.left) Body.setPosition(bb.left, { x: newX - b.w / 2 + 4, y: b.y - 4 });
-          if (bb.right) Body.setPosition(bb.right, { x: newX + b.w / 2 - 4, y: b.y - 4 });
+          if (bb.left) Body.setPosition(bb.left, { x: newX - b.w / 2 + 3, y: b.y - 30 });
+          if (bb.right) Body.setPosition(bb.right, { x: newX + b.w / 2 - 3, y: b.y - 30 });
         }
         canvas.style.cursor = 'ew-resize';
         return;
@@ -549,7 +616,7 @@ export default function PinGameCanvas({
         const isHoverBowl =
           coords.x >= b.x - b.w / 2 - 25 &&
           coords.x <= b.x + b.w / 2 + 25 &&
-          coords.y >= b.y - b.h / 2 - 25 &&
+          coords.y >= b.y - b.h / 2 - 55 &&
           coords.y <= b.y + b.h / 2 + 35;
         b.isHovered = isHoverBowl;
 
@@ -664,24 +731,15 @@ export default function PinGameCanvas({
     const render = () => {
       Matter.Engine.update(engine, 1000 / 60);
 
-      // Active bowl mouth interceptor & carried item position synchronization
+      // Active bowl mouth & high-stack interceptor
       const curB = bowlPosRef.current;
       kibbleBodies.forEach((k) => {
         if (!handledBodies.has(k.id)) {
-          const inH = Math.abs(k.position.x - curB.x) <= curB.w / 2 + 4;
-          const inV = k.position.y >= curB.y - curB.h / 2 - 6 && k.position.y <= curB.y + curB.h / 2 + 8;
+          // Intercept anywhere entering the bowl column, even stacked high!
+          const inH = Math.abs(k.position.x - curB.x) <= curB.w / 2 + 10;
+          const inV = k.position.y >= curB.y - 85 && k.position.y <= curB.y + curB.h / 2 + 10;
           if (inH && inV) {
-            handledBodies.add(k.id);
-            collectedKibbles++;
-            setKibbleInBowl(collectedKibbles);
-            AudioFX.playKibbleDrop();
-            onAddPoints(10);
-            spawnFloatingText('+10', k.position.x, k.position.y - 10);
-            Body.setVelocity(k, { x: 0, y: 0 });
-            Body.setStatic(k, true);
-            k.inBowl = true;
-            k.bowlOffsetX = k.position.x - curB.x;
-            k.bowlOffsetY = Math.min(curB.h / 2 - 6, k.position.y - curB.y);
+            catchKibble(k);
           }
         } else if (k.inBowl) {
           Body.setPosition(k, {
@@ -693,25 +751,15 @@ export default function PinGameCanvas({
 
       treatBodies.forEach((t) => {
         if (!handledBodies.has(t.id)) {
-          const inH = Math.abs(t.position.x - curB.x) <= curB.w / 2 + 8;
-          const inV = t.position.y >= curB.y - curB.h / 2 - 6 && t.position.y <= curB.y + curB.h / 2 + 8;
+          const inH = Math.abs(t.position.x - curB.x) <= curB.w / 2 + 12;
+          const inV = t.position.y >= curB.y - 95 && t.position.y <= curB.y + curB.h / 2 + 10;
           if (inH && inV) {
-            handledBodies.add(t.id);
-            collectedTreats++;
-            setTreatsInBowl(collectedTreats);
-            AudioFX.playTreatBonus();
-            onAddPoints(100);
-            spawnFloatingText('⭐ +100 TREAT!', t.position.x, t.position.y - 15);
-            Body.setVelocity(t, { x: 0, y: 0 });
-            Body.setStatic(t, true);
-            t.inBowl = true;
-            t.bowlOffsetX = t.position.x - curB.x;
-            t.bowlOffsetY = Math.min(curB.h / 2 - 6, t.position.y - curB.y);
+            catchTreat(t);
           }
         } else if (t.inBowl) {
           Body.setPosition(t, {
             x: curB.x + (t.bowlOffsetX || 0),
-            y: curB.y + (t.bowlOffsetY || 2),
+            y: curB.y + (t.bowlOffsetY || -20),
           });
         }
       });
@@ -1543,9 +1591,12 @@ export default function PinGameCanvas({
           </div>
 
           <div className="puzzle-top-actions">
-            <div className="kibble-goal-pill" title="Kibbles fed to puppy">
+            <div className="kibble-goal-pill" title="Kibbles stacked in puppy's bowl">
               <span>🍖</span>
-              <span>{kibbleInBowl}/{levelData.requiredKibble} Goal</span>
+              <span>
+                {kibbleInBowl}/{levelData.requiredKibble}
+                {kibbleInBowl >= levelData.kibbles.length ? ' ⭐ All Food Stacked!' : kibbleInBowl >= levelData.requiredKibble ? ' 🐾 Stacking High!' : ' Goal'}
+              </span>
             </div>
             <button className="btn-icon btn-sm" onClick={handleRestart} title="Restart Level">
               🔄
@@ -1691,7 +1742,9 @@ export default function PinGameCanvas({
             <div className="victory-stats-card">
               <div className="victory-stat-row">
                 <span>Kibbles Fed:</span>
-                <span style={{ color: '#ff4d6d' }}>{kibbleInBowl} pellets (+{kibbleInBowl * 10} pts)</span>
+                <span style={{ color: '#ff4d6d' }}>
+                  {kibbleInBowl}/{levelData.kibbles.length} {kibbleInBowl >= levelData.kibbles.length ? '🌟 (All Food Stacked!)' : 'pellets'} (+{kibbleInBowl * 10} pts)
+                </span>
               </div>
               <div className="victory-stat-row">
                 <span>Bonus Treat:</span>
