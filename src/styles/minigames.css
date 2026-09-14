@@ -229,3 +229,89 @@
   color: var(--primary-pink);
   box-shadow: var(--shadow-sm);
 }
+
+/* =========================================
+   Fetch Mini-Game Quick Throw Control Dock
+   ========================================= */
+.fetch-throw-dock {
+  width: 100%;
+  max-width: 650px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 8px;
+  padding: 4px 6px;
+  z-index: 20;
+}
+
+.btn-quick-throw {
+  flex: 1;
+  max-width: 190px;
+  border: 2px solid white;
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.2s var(--ease-bouncy);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.btn-quick-throw:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-quick-throw:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+}
+
+.btn-quick-throw:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(40%);
+}
+
+.btn-throw-easy {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.btn-throw-long {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.btn-throw-mega {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.throw-desc {
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 500;
+  opacity: 0.92;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+@media (max-width: 500px) {
+  .fetch-throw-dock {
+    gap: 4px;
+  }
+  .btn-quick-throw {
+    padding: 6px 4px;
+    font-size: 0.78rem;
+  }
+  .throw-desc {
+    display: none;
+  }
+}
