@@ -108,6 +108,32 @@ class SoundController {
     this.playBark(pitches[breedId] || 1.0);
   }
 
+  // Sweet contented puppy whimper/purr when petted or praised
+  playHappyWhimper() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    // Gentle rising then descending melodic whimper (520Hz -> 720Hz -> 540Hz)
+    osc.frequency.setValueAtTime(520, t);
+    osc.frequency.exponentialRampToValueAtTime(720, t + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(540, t + 0.28);
+
+    gain.gain.setValueAtTime(0.01, t);
+    gain.gain.linearRampToValueAtTime(0.18, t + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.32);
+  }
+
   // Pin sliding out sound (crisp metallic cotter-pin slide & swoosh)
   playPinSlide() {
     if (this.muted) return;

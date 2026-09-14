@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AudioFX } from '../game/AudioController';
 
 export const DOG_BREEDS = [
   {
@@ -11,6 +12,14 @@ export const DOG_BREEDS = [
     accentColor: '#38302e',
     earType: 'curly-flop',
     tailType: 'fluffy-curl',
+    personality: 'Gentle, Cuddly & Snack-Obsessed',
+    quotes: [
+      'Boop my snoot! 🐾',
+      'Is that cheese I smell?! 🧀',
+      '10/10 goodest boy! ✨',
+      'More cuddles please! 🐶',
+      'Ready to vacuum up treats! 😋',
+    ],
   },
   {
     id: 'waffles',
@@ -22,6 +31,14 @@ export const DOG_BREEDS = [
     accentColor: '#c25e15',
     earType: 'upright',
     tailType: 'stub',
+    personality: 'Feisty, Speedy & Super Bouncy',
+    quotes: [
+      'Low rider, big heart! 💖',
+      'Corgi zoomies loading... ⚡',
+      'Look at my fluffy drumsticks! 🍗',
+      'Throw the ball already! 🎾',
+      'Bouncy bouncy bouncy! ✨',
+    ],
   },
   {
     id: 'barnaby',
@@ -33,6 +50,14 @@ export const DOG_BREEDS = [
     accentColor: '#dc7633',
     earType: 'floppy',
     tailType: 'feathered',
+    personality: 'Sunshine Energy & Eternal Best Friend',
+    quotes: [
+      'I LOVE YOU! AND THE BALL! 🎾💖',
+      'Best! Day! Ever! 🌟',
+      'Belly rubs required immediately! 🐾',
+      'Golden boy at your service! ✨',
+      'I caught it! Did you see?! 🏆',
+    ],
   },
   {
     id: 'buster',
@@ -44,6 +69,14 @@ export const DOG_BREEDS = [
     accentColor: '#635343',
     earType: 'bat',
     tailType: 'stub',
+    personality: 'Goofy, Snorty & Food Motivated',
+    quotes: [
+      'Snort... snack time yet? 🥓',
+      'I didn\'t steal that treat (I did). 🐾',
+      'Ears at 100% reception! 🦇',
+      'Nap hard, play hard! 💤',
+      'Heavy breathing of love! ❤️',
+    ],
   },
   {
     id: 'mochi',
@@ -55,6 +88,14 @@ export const DOG_BREEDS = [
     accentColor: '#a64d13',
     earType: 'prick',
     tailType: 'curl',
+    personality: 'Proud, Sassy & Meme Legend',
+    quotes: [
+      'Much cute. Very doge. Wow. 🐕',
+      'Pet the royal floof. ✨',
+      'I accept your tribute of kibble. 🍖',
+      'Foxy and fabulous! 🦊',
+      'Master of the side-eye! 👀',
+    ],
   },
   {
     id: 'coco',
@@ -66,6 +107,14 @@ export const DOG_BREEDS = [
     accentColor: '#ddb892',
     earType: 'poodle-puff',
     tailType: 'pom-pom',
+    personality: 'Aristocratic, Clever & Glamorous',
+    quotes: [
+      'Mind the curls, darling! 🎀',
+      'Poodle elegance in motion! 🐩✨',
+      'Brains AND beauty! 💅',
+      'Only gourmet snacks for me! 🥐',
+      'Ready for the runway! 🌟',
+    ],
   },
 ];
 
@@ -110,44 +159,112 @@ export default function DogRenderer({
   onClick,
 }) {
   const [blink, setBlink] = useState(false);
+  const [wink, setWink] = useState(false);
+  const [headTilt, setHeadTilt] = useState(0);
   const [tailTick, setTailTick] = useState(0);
+  const [breathTick, setBreathTick] = useState(0);
+  const [isPetted, setIsPetted] = useState(false);
+  const [petHearts, setPetHearts] = useState([]);
+  const [petThought, setPetThought] = useState(null);
 
   // Find breed specs
   const breed = DOG_BREEDS.find((b) => b.id === breedId) || DOG_BREEDS[0];
+
+  // Natural breathing cycle
+  useEffect(() => {
+    const breathInterval = setInterval(() => {
+      setBreathTick((b) => (b + 1) % 100);
+    }, 40);
+    return () => clearInterval(breathInterval);
+  }, []);
+
+  const breathScale = 1 + Math.sin(breathTick * 0.1) * 0.022;
+
+  // Natural curiosity head tilts and occasional sweet winks in idle
+  useEffect(() => {
+    const tiltInterval = setInterval(() => {
+      if (state !== 'idle' || isPetted) return;
+      const tilts = [0, 11, -9, 0, 14, 0, -11];
+      const nextTilt = tilts[Math.floor(Math.random() * tilts.length)];
+      setHeadTilt(nextTilt);
+      if (Math.random() < 0.28) {
+        setWink(true);
+        setTimeout(() => setWink(false), 260);
+      }
+    }, 3200 + Math.random() * 2400);
+
+    return () => clearInterval(tiltInterval);
+  }, [state, isPetted]);
 
   // Natural blinking cycle
   useEffect(() => {
     const blinkInterval = setInterval(() => {
       setBlink(true);
       setTimeout(() => setBlink(false), 160);
-    }, 3200 + Math.random() * 2000);
+    }, 3000 + Math.random() * 2200);
 
     return () => clearInterval(blinkInterval);
   }, []);
 
-  // Tail wag loop - lively and smooth
+  // Tail wag loop - accelerated when happy or petted!
   useEffect(() => {
+    const wagSpeed = isPetted ? 55 : state === 'walking' ? 85 : 115;
     const wagInterval = setInterval(() => {
       setTailTick((t) => (t + 1) % 6);
-    }, 110);
+    }, wagSpeed);
     return () => clearInterval(wagInterval);
-  }, []);
+  }, [isPetted, state]);
 
-  const tailAngles = [-24, -12, 10, 26, 14, -10];
+  const tailAngles = [-26, -14, 12, 28, 16, -12];
   const currentTailAngle =
-    state === 'eating'
-      ? 28
+    isPetted
+      ? tailAngles[tailTick] * 1.8 + 12
+      : state === 'eating'
+      ? 30
       : state === 'barking'
-      ? tailAngles[tailTick] * 1.5 + 8
+      ? tailAngles[tailTick] * 1.6 + 8
       : state === 'walking'
       ? tailAngles[tailTick] * 1.3
       : tailAngles[tailTick];
 
+  // Loving interactive petting handler!
+  const handlePet = (e) => {
+    if (e) e.stopPropagation();
+    if (onClick) onClick(e);
+
+    AudioFX.playHappyWhimper();
+    setIsPetted(true);
+    setHeadTilt(14); // Blissful cuddle lean
+
+    // Spawn floating love particles
+    const emojis = ['💖', '✨', '🐾', '⭐', '🥰'];
+    const newHearts = Array.from({ length: 5 }).map((_, i) => ({
+      id: Date.now() + i,
+      emoji: emojis[i % emojis.length],
+      x: 35 + i * 16 + (Math.random() * 10 - 5),
+      y: 25 + Math.random() * 12,
+    }));
+    setPetHearts(newHearts);
+
+    // Pick random adorable breed quote
+    const qList = breed.quotes || ['Goodest pup! 🐾'];
+    setPetThought(qList[Math.floor(Math.random() * qList.length)]);
+
+    setTimeout(() => {
+      setIsPetted(false);
+      setHeadTilt(0);
+      setPetHearts([]);
+      setPetThought(null);
+    }, 2200);
+  };
+
   return (
     <div
       className={`dog-svg-wrapper ${state === 'barking' ? 'barking' : ''} ${className}`}
-      onClick={onClick}
+      onClick={handlePet}
+      title={`Click to pet ${breed.name}! 🐾`}
       style={{
+        position: 'relative',
         width: size,
         height: size,
         display: 'inline-flex',
@@ -155,9 +272,68 @@ export default function DogRenderer({
         justifyContent: 'center',
         transform: flip ? 'scaleX(-1)' : 'none',
         transition: 'transform 0.2s',
-        cursor: onClick ? 'pointer' : 'inherit',
+        cursor: 'pointer',
+        userSelect: 'none',
       }}
     >
+      {/* Floating Petting Hearts & Stars */}
+      {petHearts.map((h, i) => (
+        <div
+          key={h.id}
+          style={{
+            position: 'absolute',
+            left: `${h.x}%`,
+            top: `${h.y}%`,
+            fontSize: '18px',
+            pointerEvents: 'none',
+            zIndex: 20,
+            animation: `floatUpLove 1.8s ease-out forwards ${i * 0.1}s`,
+          }}
+        >
+          {h.emoji}
+        </div>
+      ))}
+
+      {/* Floating Breed Thought Bubble */}
+      {petThought && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '102%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#ffffff',
+            color: '#1e293b',
+            padding: '5px 12px',
+            borderRadius: '16px',
+            fontSize: '11.5px',
+            fontWeight: 'bold',
+            fontFamily: 'Fredoka, sans-serif',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.22)',
+            border: '2px solid #facc15',
+            whiteSpace: 'nowrap',
+            zIndex: 25,
+            pointerEvents: 'none',
+            animation: 'popInPet 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          }}
+        >
+          {petThought}
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 0,
+              height: 0,
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '6px solid #facc15',
+            }}
+          />
+        </div>
+      )}
+
       <svg
         viewBox="0 0 160 160"
         width="100%"
@@ -262,8 +438,13 @@ export default function DogRenderer({
           {/* Pooping squat transformation vs Normal sitting/walking body */}
           <g
             style={{
-              transform: state === 'pooping' ? 'translate(0, 10px) scale(1.05, 0.9)' : state === 'walking' ? 'translate(0, -3px)' : 'none',
-              transformOrigin: '80px 110px',
+              transform:
+                state === 'pooping'
+                  ? 'translate(0, 10px) scale(1.05, 0.9)'
+                  : state === 'walking'
+                  ? 'translate(0, -3px)'
+                  : `scale(1, ${breathScale})`,
+              transformOrigin: '75px 125px',
               transition: 'transform 0.2s',
             }}
           >
@@ -359,9 +540,9 @@ export default function DogRenderer({
                   ? 'translate(2px, 4px) rotate(4deg)'
                   : state === 'walking'
                   ? 'translate(0, -2px) rotate(-2deg)'
-                  : 'none',
+                  : `rotate(${headTilt}deg)`,
               transformOrigin: '96px 68px',
-              transition: 'transform 0.2s',
+              transition: 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
             }}
           >
             {/* Head Base */}
@@ -483,12 +664,14 @@ export default function DogRenderer({
               <path d="M 100 46 Q 108 43 116 47" stroke="#1c1917" strokeWidth="2.4" strokeLinecap="round" fill="none" />
             </g>
 
-            {/* Big, Soulful Cartoon Eyes */}
-            {state === 'eating' ? (
-              // Happy closed anime eyes with hearts!
+            {/* Big, Soulful Cartoon Pixar-Style Eyes */}
+            {state === 'eating' || isPetted ? (
+              // Blissful happy closed anime eyes with pink hearts!
               <g stroke="#ff3366" strokeWidth="3.4" strokeLinecap="round" fill="none">
                 <path d="M 75 62 Q 84 53 93 62" />
                 <path d="M 99 62 Q 108 53 117 62" />
+                {/* Floating mini heart */}
+                <path d="M 96 46 Q 93 42 96 39 Q 99 42 96 46 Z" fill="#ff3366" />
               </g>
             ) : state === 'pooping' ? (
               // Goofy shocked cartoon eyes with tiny pupils & sweat drops
@@ -506,30 +689,42 @@ export default function DogRenderer({
                 <path d="M 75 61 Q 84 68 93 61" fill="none" />
                 <path d="M 99 61 Q 108 68 117 61" fill="none" />
               </g>
+            ) : wink ? (
+              // Playful knowing wink!
+              <g>
+                {/* Left eye open with sparkles */}
+                <ellipse cx="84" cy="61" rx="9.5" ry="11.5" fill="#ffffff" stroke="#1c1917" strokeWidth="1.8" />
+                <ellipse cx="84.5" cy="61.5" rx="7.2" ry="8.6" fill="#382216" />
+                <circle cx="81.5" cy="57.5" r="3.2" fill="#ffffff" />
+                <circle cx="87.5" cy="65.5" r="1.6" fill="#ffffff" />
+                {/* Right eye winking shut with cute curved lash */}
+                <path d="M 99 62 Q 108 54 117 62" stroke="#1c1917" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+                <path d="M 116 59 L 120 56" stroke="#1c1917" strokeWidth="2.2" strokeLinecap="round" />
+              </g>
             ) : (
-              // Big, glossy, soulful cartoon puppy eyes!
+              // Big, glossy, soulful cartoon puppy eyes with 3-tier sparkles!
               <g id="bigCartoonEyes">
                 {/* Left Eye */}
                 <ellipse cx="84" cy="61" rx="9.5" ry="11.5" fill="#ffffff" stroke="#1c1917" strokeWidth="1.8" />
                 <ellipse cx="84.5" cy="61.5" rx="7.2" ry="8.6" fill="#382216" />
                 <ellipse cx="85" cy="62" rx="5.2" ry="6.2" fill="#140d0a" />
-                {/* Amber warm reflection */}
+                {/* Warm amber reflective crescent */}
                 <path d="M 79 63 C 81 68, 88 68, 90 63 C 88 66, 81 66, 79 63 Z" fill="#b45309" opacity="0.75" />
-                {/* Glossy Twinkle Catchlights */}
+                {/* Triple Glossy Catchlights */}
                 <circle cx="81.5" cy="57.5" r="3.2" fill="#ffffff" />
-                <circle cx="87.5" cy="65.5" r="1.6" fill="#ffffff" />
-                <circle cx="81.5" cy="64" r="0.9" fill="#ffffff" />
+                <circle cx="87.5" cy="65.5" r="1.8" fill="#ffffff" />
+                <circle cx="81.5" cy="64" r="1.1" fill="#ffffff" />
 
                 {/* Right Eye */}
                 <ellipse cx="108" cy="61" rx="9.5" ry="11.5" fill="#ffffff" stroke="#1c1917" strokeWidth="1.8" />
                 <ellipse cx="107.5" cy="61.5" rx="7.2" ry="8.6" fill="#382216" />
                 <ellipse cx="107" cy="62" rx="5.2" ry="6.2" fill="#140d0a" />
-                {/* Amber warm reflection */}
+                {/* Warm amber reflective crescent */}
                 <path d="M 102 63 C 104 68, 111 68, 113 63 C 111 66, 104 66, 102 63 Z" fill="#b45309" opacity="0.75" />
-                {/* Glossy Twinkle Catchlights */}
+                {/* Triple Glossy Catchlights */}
                 <circle cx="104.5" cy="57.5" r="3.2" fill="#ffffff" />
-                <circle cx="110.5" cy="65.5" r="1.6" fill="#ffffff" />
-                <circle cx="104.5" cy="64" r="0.9" fill="#ffffff" />
+                <circle cx="110.5" cy="65.5" r="1.8" fill="#ffffff" />
+                <circle cx="104.5" cy="64" r="1.1" fill="#ffffff" />
               </g>
             )}
 
@@ -569,11 +764,11 @@ export default function DogRenderer({
               {state === 'pooping' ? (
                 // Wavy embarrassed squiggly mouth
                 <path d="M 90 76 Q 93 73 96 76 Q 99 79 102 76" stroke="#444" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-              ) : state === 'eating' ? (
-                // Wide happy eating smile with tongue
+              ) : state === 'eating' || isPetted ? (
+                // Wide happy smile with licking tongue
                 <g>
                   <path d="M 89 74 Q 96 84 103 74" fill="#d90429" stroke="#1c1917" strokeWidth="1.8" />
-                  <ellipse cx="96" cy="78" rx="4" ry="3.5" fill="#ff758f" />
+                  <ellipse cx="96" cy="78" rx="4.5" ry="3.8" fill="#ff758f" />
                 </g>
               ) : state === 'barking' ? (
                 // Open joyful barking mouth with tongue, teeth, and vocal sound waves
@@ -588,10 +783,16 @@ export default function DogRenderer({
                   <path d="M 117 64 Q 124 72 117 81" stroke="#ff4d6d" strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.7" />
                 </g>
               ) : (
-                // Happy resting puppy smile with cute panting tongue
+                // Happy resting puppy smile with cute tongue blep!
                 <g>
                   <path d="M 92 73 Q 96 77 100 73" stroke="#2b2b2b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-                  <path d="M 93.5 74 Q 96 81 98.5 74 Z" fill="#ff758f" />
+                  {/* Sweet pink puppy tongue blep */}
+                  <path d="M 94 74 Q 96 81 98 74 Z" fill="#ff758f" />
+                  <line x1="96" y1="74" x2="96" y2="78" stroke="#e11d48" strokeWidth="0.8" strokeLinecap="round" />
+                  {/* Buster Frenchie cute snaggletooth! */}
+                  {breed.id === 'buster' && (
+                    <polygon points="91,73 93,69 95,73" fill="#ffffff" stroke="#1c1917" strokeWidth="0.8" />
+                  )}
                 </g>
               )}
             </g>
