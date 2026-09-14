@@ -855,21 +855,30 @@ export default function PoopPatrolGame({
         AudioFX.stopMower();
       };
     } else {
-      // MODE: POOP SCOOPER (Tap & Scoop)
+      // MODE: POOP SCOOPER (Tap & Scoop before they explode!)
       AudioFX.stopMower();
       const ss = scooperState.current;
       ss.poops = [];
       ss.explosions = [];
       ss.splats = [];
 
-      // Spawn initial poops
-      for (let i = 0; i < TOTAL_GOAL_POOPS; i++) {
+      // Helper function to spawn a timed poop on the grass
+      const spawnScooperPoop = (id = Date.now() + Math.random(), initialStagger = 0) => {
+        const baseTimer = 400 + Math.floor(Math.random() * 180); // ~6.5s to 9.5s
+        const timer = baseTimer + initialStagger;
         ss.poops.push({
-          id: i,
-          x: Math.random() * (width - 100) + 50,
-          y: Math.random() * (height - 100) + 50,
+          id,
+          x: Math.random() * (width - 140) + 70,
+          y: Math.random() * (height - 140) + 70,
           scale: 1,
+          timer,
+          maxTimer: timer,
         });
+      };
+
+      // Spawn initial 5 poops with staggered fuses
+      for (let i = 0; i < 5; i++) {
+        spawnScooperPoop(i, i * 85);
       }
 
       const handleCanvasClick = (e) => {
@@ -899,22 +908,52 @@ export default function PoopPatrolGame({
         for (let i = ss.poops.length - 1; i >= 0; i--) {
           const p = ss.poops[i];
           const dist = Math.hypot(p.x - clickX, p.y - clickY);
-          if (dist < 35) {
-            // SCOOPED!
+          if (dist < 38) {
+            // SCOOPED IN TIME! 🧹✨
             ss.poops.splice(i, 1);
             AudioFX.playScoop();
-            onAddPoints(30);
-            setScore((s) => s + 30);
+
+            // Golden sparkling clean burst!
+            for (let k = 0; k < 16; k++) {
+              const ang = (Math.PI * 2 * k) / 16 + Math.random() * 0.3;
+              const spd = Math.random() * 4 + 2;
+              ss.explosions.push({
+                x: p.x,
+                y: p.y,
+                vx: Math.cos(ang) * spd,
+                vy: Math.sin(ang) * spd,
+                size: Math.random() * 5 + 3,
+                color: ['#ffbe0b', '#38bdf8', '#4ade80', '#ffffff', '#ec4899'][k % 5],
+                life: 1.0,
+                decay: 0.035,
+              });
+            }
+
+            ss.splats.push({
+              x: p.x,
+              y: p.y - 18,
+              text: '✨ SCOOPED! +50',
+              life: 1.0,
+            });
+
+            onAddPoints(50);
+            setScore((s) => s + 50);
+
             setPoopsCleared((prevCleared) => {
               const next = prevCleared + 1;
               if (next >= TOTAL_GOAL_POOPS) {
                 setGameWon(true);
                 AudioFX.playWinFanfare();
                 confetti({
-                  particleCount: 80,
-                  spread: 75,
+                  particleCount: 90,
+                  spread: 80,
                   origin: { y: 0.6 },
                 });
+              } else {
+                // Keep active poop count healthy until goal reached
+                if (ss.poops.length < 4) {
+                  spawnScooperPoop();
+                }
               }
               return next;
             });
@@ -928,38 +967,221 @@ export default function PoopPatrolGame({
       const scooperLoop = () => {
         ctx.clearRect(0, 0, width, height);
 
-        // Garden Soil & Flower Bed Background
-        ctx.fillStyle = '#78350f';
+        // 1. Lush Green Grass Lawn Background
+        const lawnGrad = ctx.createLinearGradient(0, 0, 0, height);
+        lawnGrad.addColorStop(0, '#22c55e'); // Vibrant emerald green
+        lawnGrad.addColorStop(0.5, '#16a34a'); // Rich lawn green
+        lawnGrad.addColorStop(1, '#15803d'); // Deep garden grass
+        ctx.fillStyle = lawnGrad;
         ctx.fillRect(0, 0, width, height);
 
-        // Grass patches
-        ctx.fillStyle = '#22c55e';
-        for (let r = 0; r < 6; r++) {
-          for (let c = 0; c < 8; c++) {
-            ctx.beginPath();
-            ctx.roundRect(c * 80 + 10, r * 80 + 10, 60, 60, 16);
-            ctx.fill();
-          }
+        // 2. Freshly Mowed Lawn Stripes (Realistic Backyard Turf)
+        const stripeWidth = 44;
+        for (let x = 0; x < width; x += stripeWidth) {
+          const isLight = Math.floor(x / stripeWidth) % 2 === 0;
+          ctx.fillStyle = isLight ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.06)';
+          ctx.fillRect(x, 0, stripeWidth, height);
         }
 
-        // Draw Poops with flies
-        ss.poops.forEach((p) => {
-          ctx.font = '34px sans-serif';
+        // 3. Delicate Grass Tufts across the lawn
+        const grassTufts = [
+          { x: 45, y: 55 }, { x: 120, y: 110 }, { x: 230, y: 70 }, { x: 340, y: 130 },
+          { x: 470, y: 65 }, { x: 550, y: 120 }, { x: 80, y: 220 }, { x: 190, y: 280 },
+          { x: 290, y: 210 }, { x: 410, y: 260 }, { x: 520, y: 240 }, { x: 60, y: 390 },
+          { x: 160, y: 440 }, { x: 270, y: 380 }, { x: 390, y: 430 }, { x: 490, y: 370 },
+        ];
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 1.6;
+        grassTufts.forEach(t => {
+          ctx.beginPath();
+          ctx.moveTo(t.x, t.y);
+          ctx.lineTo(t.x - 3, t.y - 8);
+          ctx.moveTo(t.x, t.y);
+          ctx.lineTo(t.x, t.y - 10);
+          ctx.moveTo(t.x, t.y);
+          ctx.lineTo(t.x + 3, t.y - 8);
+          ctx.stroke();
+        });
+
+        // 4. Sprinkled Backyard Daisies & Blossoms
+        const flowers = [
+          { x: 75, y: 85, color: '#fef08a' },
+          { x: 210, y: 160, color: '#ffffff' },
+          { x: 380, y: 80, color: '#f472b6' },
+          { x: 510, y: 175, color: '#ffffff' },
+          { x: 130, y: 340, color: '#fef08a' },
+          { x: 320, y: 310, color: '#ffffff' },
+          { x: 460, y: 420, color: '#f472b6' },
+          { x: 230, y: 445, color: '#ffffff' },
+        ];
+        flowers.forEach(d => {
+          ctx.fillStyle = d.color;
+          for (let p = 0; p < 5; p++) {
+            const ang = (Math.PI * 2 / 5) * p;
+            ctx.beginPath();
+            ctx.arc(d.x + Math.cos(ang) * 4.5, d.y + Math.sin(ang) * 4.5, 2.8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = '#eab308';
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // 5. Lawn Perimeter Border
+        ctx.strokeStyle = 'rgba(21, 128, 61, 0.45)';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(2, 2, width - 4, height - 4);
+
+        // 6. Update Poop Countdown Timers & Explode if Not Scooped in Time!
+        for (let i = ss.poops.length - 1; i >= 0; i--) {
+          const p = ss.poops[i];
+          if (!gameWon) {
+            p.timer--;
+          }
+
+          // 💥 DETONATION: TIME RAN OUT WITHOUT SCOOPING!
+          if (p.timer <= 0 && !gameWon) {
+            AudioFX.playPoopExplosion();
+
+            for (let k = 0; k < 22; k++) {
+              const ang = (Math.PI * 2 * k) / 22 + Math.random() * 0.4;
+              const spd = Math.random() * 6 + 2.5;
+              ss.explosions.push({
+                x: p.x,
+                y: p.y,
+                vx: Math.cos(ang) * spd,
+                vy: Math.sin(ang) * spd,
+                size: Math.random() * 8 + 4,
+                color: ['#7f4f24', '#58311e', '#a66a38', '#ef4444', '#f59e0b'][Math.floor(Math.random() * 5)],
+                life: 1.0,
+                decay: Math.random() * 0.035 + 0.02,
+              });
+            }
+
+            ss.splats.push({
+              x: p.x,
+              y: p.y - 18,
+              text: '💥 TOO LATE! BOOM!',
+              life: 1.0,
+            });
+
+            setBarkBubble('Boom! Scoop faster! 🐶💨');
+            setTimeout(() => setBarkBubble(null), 1400);
+
+            // Remove exploded poop
+            ss.poops.splice(i, 1);
+
+            // Spawn replacement poop with cute toot sound so player can keep playing
+            spawnScooperPoop();
+            AudioFX.playPoop();
+            continue;
+          }
+
+          // Draw Poop with dynamic ticking fuse and tremble wobble
+          const ratio = Math.max(0, p.timer / p.maxTimer);
+          const isUrgent = ratio < 0.35;
+          const isCritical = ratio < 0.18;
+
+          // Wobble/tremble shake when fuse is burning down
+          let drawX = p.x;
+          let drawY = p.y;
+          if (isUrgent) {
+            const wobbleAmount = (1 - ratio) * 6;
+            drawX += Math.sin(Date.now() * 0.045 + p.id) * wobbleAmount;
+            drawY += Math.cos(Date.now() * 0.055 + p.id) * (wobbleAmount * 0.5);
+          }
+
+          // Glowing countdown fuse ring around poop
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 25, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+          ctx.fill();
+
+          // Active countdown arc
+          const arcColor = ratio > 0.5 ? '#22c55e' : ratio > 0.25 ? '#f59e0b' : '#ef4444';
+          ctx.strokeStyle = arcColor;
+          ctx.lineWidth = isCritical ? 4.5 : 3.5;
+          if (isCritical) {
+            ctx.shadowColor = '#ef4444';
+            ctx.shadowBlur = 10;
+          }
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 25, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio);
+          ctx.stroke();
+          ctx.restore();
+
+          // Pulsing warning badge if about to explode
+          if (isCritical) {
+            ctx.save();
+            const flash = Math.sin(Date.now() * 0.018) > 0;
+            ctx.font = 'bold 13px Fredoka, sans-serif';
+            ctx.fillStyle = flash ? '#ef4444' : '#fde047';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚠️ EXPLODING!', p.x, p.y - 30);
+            ctx.restore();
+          }
+
+          // Draw Poop Emoji
+          ctx.save();
+          ctx.font = isCritical ? '36px sans-serif' : '32px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('💩', p.x, p.y);
+          ctx.fillText('💩', drawX, drawY);
+          ctx.restore();
 
           // Fly buzzing around
-          const flyAngle = Date.now() * 0.006;
-          const flyX = p.x + Math.cos(flyAngle) * 18;
-          const flyY = p.y + Math.sin(flyAngle) * 18;
+          const flyAngle = Date.now() * 0.007 + p.id;
+          const flyX = drawX + Math.cos(flyAngle) * 20;
+          const flyY = drawY + Math.sin(flyAngle) * 16;
           ctx.fillStyle = '#0f172a';
           ctx.beginPath();
           ctx.arc(flyX, flyY, 2.5, 0, Math.PI * 2);
           ctx.fill();
-        });
+        }
 
-        // Scampering Critter (Bunny or Squirrel) in Garden
+        // 7. Render Explosion Particles
+        for (let i = ss.explosions.length - 1; i >= 0; i--) {
+          const ep = ss.explosions[i];
+          ep.x += ep.vx;
+          ep.y += ep.vy;
+          ep.life -= ep.decay;
+          if (ep.life <= 0) {
+            ss.explosions.splice(i, 1);
+          } else {
+            ctx.save();
+            ctx.globalAlpha = ep.life;
+            ctx.fillStyle = ep.color;
+            ctx.beginPath();
+            ctx.arc(ep.x, ep.y, ep.size * ep.life, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        // 8. Render Splat Comic Badges
+        for (let i = ss.splats.length - 1; i >= 0; i--) {
+          const sp = ss.splats[i];
+          sp.y -= 0.7;
+          sp.life -= 0.03;
+          if (sp.life <= 0) {
+            ss.splats.splice(i, 1);
+          } else {
+            ctx.save();
+            ctx.globalAlpha = sp.life;
+            ctx.font = 'bold 16px Fredoka, sans-serif';
+            ctx.fillStyle = sp.text.includes('SCOOPED') ? '#4ade80' : '#ffbe0b';
+            ctx.strokeStyle = '#3b1d11';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+            ctx.strokeText(sp.text, sp.x, sp.y);
+            ctx.fillText(sp.text, sp.x, sp.y);
+            ctx.restore();
+          }
+        }
+
+        // 9. Scampering Critter (Bunny or Squirrel) in Garden
         const cs = critterState.current;
         if (!cs.critter && !gameWon) {
           cs.timer--;
@@ -1164,7 +1386,7 @@ export default function PoopPatrolGame({
         <div className="garden-instruction-text">
           {mode === 'mower'
             ? '🚜 Click or drag grass to drive mower • Arrow Keys / WASD also work!'
-            : '🧹 Tap poops to scoop them up!'}
+            : '🧹 Tap poops to scoop before they explode! ⏱️💥'}
         </div>
 
         <button
