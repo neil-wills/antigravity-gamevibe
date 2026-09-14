@@ -1,0 +1,208 @@
+/* Wardrobe & Dog Customization Styles */
+.wardrobe-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .wardrobe-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+}
+
+/* Dog Stage Preview */
+.dog-stage {
+  position: relative;
+  background: radial-gradient(circle, #ffffff 30%, #fff0f5 100%);
+  border-radius: var(--radius-lg);
+  border: 3px dashed var(--primary-pink-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  min-height: 250px;
+  box-shadow: inset 0 2px 10px rgba(255, 94, 131, 0.08);
+}
+
+.dog-stage-platform {
+  position: absolute;
+  bottom: 20px;
+  width: 180px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 94, 131, 0.15);
+  filter: blur(4px);
+  z-index: 1;
+}
+
+.dog-stage-name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary-pink);
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dog-stage-breed {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #777;
+}
+
+/* Breed Selector Carousel */
+.breed-selector-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 6px 2px 14px 2px;
+  scrollbar-width: thin;
+}
+
+.breed-card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: white;
+  border: 2.5px solid #eee;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-bouncy);
+}
+
+.breed-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-pink);
+}
+
+.breed-card.selected {
+  border-color: var(--primary-pink);
+  background: var(--primary-pink-light);
+  box-shadow: 0 4px 14px var(--primary-pink-glow);
+}
+
+.breed-card-avatar {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.breed-card-name {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Category Tabs */
+.wardrobe-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 8px;
+  overflow-x: auto;
+}
+
+.wardrobe-tab-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #777;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.wardrobe-tab-btn:hover {
+  color: var(--primary-pink);
+  background: #fff5f8;
+}
+
+.wardrobe-tab-btn.active {
+  color: white;
+  background: var(--primary-pink);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Items Grid */
+.wardrobe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+  padding: 12px 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.wardrobe-item-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  background: white;
+  border: 2px solid #eee;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s var(--ease-bouncy);
+}
+
+.wardrobe-item-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-gold);
+}
+
+.wardrobe-item-card.equipped {
+  border-color: var(--accent-teal);
+  background: var(--accent-teal-light);
+}
+
+.wardrobe-item-card.equipped::after {
+  content: "✓";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--accent-teal);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wardrobe-item-icon {
+  font-size: 1.8rem;
+}
+
+.wardrobe-item-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #555;
+  text-align: center;
+}

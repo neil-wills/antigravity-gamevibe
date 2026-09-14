@@ -1,0 +1,55 @@
+/* Design System Tokens for Puppy Pin Rescue */
+:root {
+  /* Color Palette - Vibrant & Sweet Pastel Theme */
+  --primary-pink: #ff5e83;
+  --primary-pink-hover: #ff4773;
+  --primary-pink-light: #ffe4ec;
+  --primary-pink-glow: rgba(255, 94, 131, 0.4);
+
+  --accent-gold: #ffbe0b;
+  --accent-gold-light: #fff3c4;
+  --accent-gold-glow: rgba(255, 190, 11, 0.45);
+
+  --accent-teal: #06d6a0;
+  --accent-teal-dark: #05a87d;
+  --accent-teal-light: #d8fbf1;
+
+  --accent-blue: #3a86ff;
+  --accent-blue-light: #e0edff;
+
+  --accent-purple: #8338ec;
+  --accent-purple-light: #efe6fd;
+
+  --warm-chocolate: #58311e;
+  --warm-poop: #7f4f24;
+  --fresh-grass: #4caf50;
+  --dark-grass: #388e3c;
+
+  /* Surfaces & Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-bg-subtle: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 8px 32px 0 rgba(255, 94, 131, 0.15);
+  --modal-overlay: rgba(30, 20, 40, 0.6);
+
+  /* Typography */
+  --font-display: 'Fredoka', cursive, sans-serif;
+  --font-body: 'Quicksand', sans-serif;
+
+  /* Elevations & Radii */
+  --radius-xs: 8px;
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 3px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 12px 28px rgba(255, 94, 131, 0.22);
+  --shadow-glow: 0 0 20px var(--primary-pink-glow);
+
+  /* Transitions */
+  --ease-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}

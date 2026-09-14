@@ -1,0 +1,192 @@
+/* Puzzle Gameplay & Pin Pulling Styles */
+.puzzle-view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.puzzle-top-bar {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  margin-bottom: 6px;
+  z-index: 5;
+}
+
+.level-badge {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.level-star {
+  font-size: 1rem;
+  color: #ccc;
+  transition: transform 0.2s;
+}
+
+.level-star.active {
+  color: var(--accent-gold);
+  filter: drop-shadow(0 0 4px var(--accent-gold-glow));
+}
+
+/* Physics Stage Board */
+.puzzle-board-container {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: calc(100vh - 170px);
+  max-height: 600px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: var(--radius-lg);
+  border: 4px solid white;
+  box-shadow: 0 16px 40px rgba(255, 94, 131, 0.2), inset 0 2px 8px rgba(0,0,0,0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.puzzle-canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.puzzle-canvas:active {
+  cursor: grabbing;
+}
+
+/* Surprise Poop Event Banner & Scooper Alert */
+.poop-alert-container {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: bounceIn 0.3s var(--ease-bouncy);
+}
+
+.poop-alert-banner {
+  background: linear-gradient(135deg, #7f4f24, #a66a38);
+  color: white;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: var(--shadow-md);
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.poop-scoop-btn {
+  background: linear-gradient(135deg, #ffbe0b, #fb5607);
+  color: white;
+  border: 2px solid white;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulseGlow 1.2s infinite ease-in-out;
+}
+
+.poop-scoop-btn:hover {
+  transform: scale(1.08);
+}
+
+/* Victory Screen Overlay */
+.victory-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: bounceIn 0.4s var(--ease-bouncy);
+  text-align: center;
+}
+
+.victory-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-pink);
+  margin-bottom: 8px;
+}
+
+.victory-subtitle {
+  font-size: 1.05rem;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.victory-stars {
+  display: flex;
+  gap: 12px;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+}
+
+.victory-stats-card {
+  background: #fff8fa;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--primary-pink-light);
+  padding: 14px 24px;
+  width: 100%;
+  max-width: 280px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.victory-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: #444;
+}
+
+.victory-actions {
+  display: flex;
+  gap: 12px;
+}
