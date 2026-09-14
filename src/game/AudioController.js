@@ -3,8 +3,7 @@ class SoundController {
   constructor() {
     this.ctx = null;
     this.muted = localStorage.getItem('puppy_muted') === 'true';
-    this.mowerOsc = null;
-    this.mowerGain = null;
+    this.mowerNodes = null;
   }
 
   init() {
@@ -22,9 +21,15 @@ class SoundController {
   toggleMute() {
     this.muted = !this.muted;
     localStorage.setItem('puppy_muted', this.muted);
-    if (this.muted && this.mowerGain) {
+    if (this.muted && this.mowerNodes) {
       this.stopMower();
     }
+    // Dispatch global event so all components and HUDs update their mute state in real time!
+    try {
+      window.dispatchEvent(
+        new CustomEvent('puppy_audio_mute_changed', { detail: { muted: this.muted } })
+      );
+    } catch (e) {}
     return this.muted;
   }
 
@@ -349,48 +354,158 @@ class SoundController {
     osc.stop(t + 0.14);
   }
 
-  // Start lawn mower engine hum
+  // Start realistic multi-layered lawn mower engine
   startMower() {
-    if (this.muted || this.mowerOsc) return;
+    if (this.muted || this.mowerNodes) return;
     this.init();
     if (!this.ctx) return;
 
     const t = this.ctx.currentTime;
-    this.mowerOsc = this.ctx.createOscillator();
-    this.mowerGain = this.ctx.createGain();
-    const filter = this.ctx.createBiquadFilter();
 
-    this.mowerOsc.type = 'sawtooth';
-    this.mowerOsc.frequency.setValueAtTime(75, t); // deep engine rumble
+    // Master Mower Gain
+    const mainGain = this.ctx.createGain();
+    mainGain.gain.setValueAtTime(0.001, t);
+    mainGain.gain.linearRampToValueAtTime(0.12, t + 0.25);
+    mainGain.connect(this.ctx.destination);
 
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(300, t);
+    // 1. Engine Cylinder Resonant Filter
+    const engineFilter = this.ctx.createBiquadFilter();
+    engineFilter.type = 'lowpass';
+    engineFilter.frequency.setValueAtTime(320, t);
+    engineFilter.Q.setValueAtTime(2.4, t);
+    engineFilter.connect(mainGain);
 
-    this.mowerGain.gain.setValueAtTime(0.01, t);
-    this.mowerGain.gain.linearRampToValueAtTime(0.12, t + 0.2);
+    // 2. Dual Engine Oscillators (Sawtooth + Triangle)
+    const osc1 = this.ctx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(52, t); // 52 Hz deep 4-stroke throb
 
-    this.mowerOsc.connect(filter);
-    filter.connect(this.mowerGain);
-    this.mowerGain.connect(this.ctx.destination);
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(104, t); // second harmonic body
 
-    this.mowerOsc.start(t);
+    // 3. Engine Putter / Stroke LFO (Amplitude Modulation for realistic "put-put-put" pulse)
+    const lfo = this.ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(17, t); // 17 strokes/sec idle
+
+    const lfoGain = this.ctx.createGain();
+    lfoGain.gain.setValueAtTime(0.24, t);
+
+    const enginePutterGain = this.ctx.createGain();
+    enginePutterGain.gain.setValueAtTime(0.76, t);
+    lfo.connect(lfoGain);
+    lfoGain.connect(enginePutterGain.gain);
+
+    osc1.connect(enginePutterGain);
+    osc2.connect(enginePutterGain);
+    enginePutterGain.connect(engineFilter);
+
+    // 4. Spinning Blade Airflow & Deck Turbulence (Filtered Noise)
+    const bufferSize = Math.floor(this.ctx.sampleRate * 1.5);
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    let lastOut = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      output[i] = (lastOut + 0.025 * white) / 1.025; // warm pink noise
+      lastOut = output[i];
+    }
+
+    const noiseSource = this.ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
+
+    // Bandpass filter for blade slicing whoosh
+    const bladeFilter = this.ctx.createBiquadFilter();
+    bladeFilter.type = 'bandpass';
+    bladeFilter.frequency.setValueAtTime(460, t);
+    bladeFilter.Q.setValueAtTime(1.9, t);
+
+    const bladeGain = this.ctx.createGain();
+    bladeGain.gain.setValueAtTime(0.09, t);
+
+    noiseSource.connect(bladeFilter);
+    bladeFilter.connect(bladeGain);
+    bladeGain.connect(mainGain);
+
+    // Crank ignition sputter ramp
+    osc1.frequency.setValueAtTime(35, t);
+    osc1.frequency.exponentialRampToValueAtTime(52, t + 0.22);
+    osc2.frequency.setValueAtTime(70, t);
+    osc2.frequency.exponentialRampToValueAtTime(104, t + 0.22);
+
+    osc1.start(t);
+    osc2.start(t);
+    lfo.start(t);
+    noiseSource.start(t);
+
+    this.mowerNodes = {
+      osc1,
+      osc2,
+      lfo,
+      noiseSource,
+      engineFilter,
+      bladeFilter,
+      bladeGain,
+      mainGain,
+      isRevving: false,
+    };
   }
 
-  // Stop lawn mower
-  stopMower() {
-    if (!this.mowerOsc || !this.ctx) return;
+  // Dynamic throttle revving when mower is actively driving
+  setMowerThrottle(isDriving) {
+    if (!this.mowerNodes || !this.ctx || this.muted) return;
     const t = this.ctx.currentTime;
-    this.mowerGain.gain.linearRampToValueAtTime(0.001, t + 0.1);
+    const { osc1, osc2, lfo, engineFilter, bladeFilter, bladeGain, isRevving } = this.mowerNodes;
+
+    if (isDriving && !isRevving) {
+      this.mowerNodes.isRevving = true;
+      osc1.frequency.linearRampToValueAtTime(70, t + 0.2);
+      osc2.frequency.linearRampToValueAtTime(140, t + 0.2);
+      lfo.frequency.linearRampToValueAtTime(24, t + 0.2);
+      engineFilter.frequency.linearRampToValueAtTime(480, t + 0.2);
+      bladeFilter.frequency.linearRampToValueAtTime(580, t + 0.2);
+      bladeGain.gain.linearRampToValueAtTime(0.15, t + 0.2);
+    } else if (!isDriving && isRevving) {
+      this.mowerNodes.isRevving = false;
+      osc1.frequency.linearRampToValueAtTime(52, t + 0.25);
+      osc2.frequency.linearRampToValueAtTime(104, t + 0.25);
+      lfo.frequency.linearRampToValueAtTime(17, t + 0.25);
+      engineFilter.frequency.linearRampToValueAtTime(320, t + 0.25);
+      bladeFilter.frequency.linearRampToValueAtTime(460, t + 0.25);
+      bladeGain.gain.linearRampToValueAtTime(0.09, t + 0.25);
+    }
+  }
+
+  // Stop lawn mower with realistic spin-down
+  stopMower() {
+    if (!this.mowerNodes || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const { mainGain, osc1, osc2, lfo, noiseSource } = this.mowerNodes;
+
+    try {
+      mainGain.gain.linearRampToValueAtTime(0.001, t + 0.18);
+      osc1.frequency.exponentialRampToValueAtTime(25, t + 0.18);
+      osc2.frequency.exponentialRampToValueAtTime(50, t + 0.18);
+    } catch (e) {}
+
+    const nodesToStop = this.mowerNodes;
+    this.mowerNodes = null;
+
     setTimeout(() => {
-      if (this.mowerOsc) {
-        try {
-          this.mowerOsc.stop();
-          this.mowerOsc.disconnect();
-        } catch (e) {}
-        this.mowerOsc = null;
-        this.mowerGain = null;
-      }
-    }, 120);
+      try {
+        nodesToStop.osc1.stop();
+        nodesToStop.osc2.stop();
+        nodesToStop.lfo.stop();
+        nodesToStop.noiseSource.stop();
+        nodesToStop.osc1.disconnect();
+        nodesToStop.osc2.disconnect();
+        nodesToStop.lfo.disconnect();
+        nodesToStop.noiseSource.disconnect();
+        nodesToStop.mainGain.disconnect();
+      } catch (e) {}
+    }, 200);
   }
 
   // Level Complete Win Fanfare

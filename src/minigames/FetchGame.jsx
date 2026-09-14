@@ -393,6 +393,8 @@ export default function FetchGame({
   onAddPoints,
   onAddSteps,
   onBack,
+  isMuted = AudioFX.muted,
+  onToggleMute,
 }) {
   const [score, setScore] = useState(0);
   const [catches, setCatches] = useState(0);
@@ -1201,6 +1203,14 @@ export default function FetchGame({
           title="Exit and return to puzzle levels"
         >
           ✕ Cancel / Exit
+        </button>
+
+        <button
+          className={`btn-quick-mute ${isMuted ? 'muted' : ''}`}
+          onClick={onToggleMute || (() => AudioFX.toggleMute())}
+          title="Quick Mute Sound for quiet family play (Hotkey: 'M')"
+        >
+          {isMuted ? '🔇 Muted' : '🔊 Sound'}
         </button>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

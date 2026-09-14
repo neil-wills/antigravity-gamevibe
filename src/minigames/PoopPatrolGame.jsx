@@ -286,6 +286,8 @@ export default function PoopPatrolGame({
   onAddPoints,
   onAddSteps,
   onBack,
+  isMuted = AudioFX.muted,
+  onToggleMute,
 }) {
   const [mode, setMode] = useState('mower'); // 'scooper' | 'mower'
   const [score, setScore] = useState(0);
@@ -399,6 +401,17 @@ export default function PoopPatrolGame({
     AudioFX.playPinSlide();
     onBack();
   };
+
+  // Dynamically start / stop mower engine sound on mute toggle
+  useEffect(() => {
+    if (mode === 'mower' && !gameWon) {
+      if (isMuted) {
+        AudioFX.stopMower();
+      } else {
+        AudioFX.startMower();
+      }
+    }
+  }, [isMuted, mode, gameWon]);
 
   // Initialize or Switch Modes
   useEffect(() => {
@@ -570,6 +583,9 @@ export default function PoopPatrolGame({
           ms.x = Math.max(25, Math.min(width - 25, ms.x));
           ms.y = Math.max(25, Math.min(height - 25, ms.y));
         }
+
+        // Throttle revving sound based on active movement
+        AudioFX.setMowerThrottle(!gameWon && Math.abs(ms.speed) > 0.45);
 
         // Draw Grass Grid (Tall lush grass vs Neat cut stripes)
         let mowedCount = 0;
@@ -1263,6 +1279,14 @@ export default function PoopPatrolGame({
           title="Exit and return to puzzle levels"
         >
           ✕ Cancel / Exit
+        </button>
+
+        <button
+          className={`btn-quick-mute ${isMuted ? 'muted' : ''}`}
+          onClick={onToggleMute || (() => AudioFX.toggleMute())}
+          title="Quick Mute Sound for quiet family play (Hotkey: 'M')"
+        >
+          {isMuted ? '🔇 Muted' : '🔊 Sound'}
         </button>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

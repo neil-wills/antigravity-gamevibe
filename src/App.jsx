@@ -93,6 +93,33 @@ export default function App() {
     setIsMuted(muted);
   };
 
+  // Global Quick Mute Keyboard Shortcut ('M' or 'm') & Event Sync
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) {
+        return;
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        const nextMuted = AudioFX.toggleMute();
+        setIsMuted(nextMuted);
+      }
+    };
+
+    const handleMuteEvent = (e) => {
+      if (e?.detail?.muted !== undefined) {
+        setIsMuted(e.detail.muted);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('puppy_audio_mute_changed', handleMuteEvent);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('puppy_audio_mute_changed', handleMuteEvent);
+    };
+  }, []);
+
   const handleSaveWardrobe = (newBreed, newWardrobe) => {
     setCurrentBreed(newBreed);
     setWardrobe(newWardrobe);
@@ -140,6 +167,8 @@ export default function App() {
             onAddPoints={handleAddPoints}
             onAddSteps={handleAddSteps}
             onBack={() => setActiveView('puzzle')}
+            isMuted={isMuted}
+            onToggleMute={handleToggleMute}
           />
         )}
 
@@ -150,6 +179,8 @@ export default function App() {
             onAddPoints={handleAddPoints}
             onAddSteps={handleAddSteps}
             onBack={() => setActiveView('puzzle')}
+            isMuted={isMuted}
+            onToggleMute={handleToggleMute}
           />
         )}
 
@@ -160,6 +191,8 @@ export default function App() {
             onAddPoints={handleAddPoints}
             onAddSteps={handleAddSteps}
             onBack={() => setActiveView('puzzle')}
+            isMuted={isMuted}
+            onToggleMute={handleToggleMute}
           />
         )}
       </main>
