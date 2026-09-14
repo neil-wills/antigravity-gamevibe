@@ -19,11 +19,11 @@ export const PUZZLE_LEVELS = [
       { x: 200, y: 360, radius: 24, color: "#00f5d4", pulse: 0 },
     ],
     walls: [
-      { x: 100, y: 150, w: 16, h: 160, isBouncy: false },
-      { x: 300, y: 150, w: 16, h: 160, isBouncy: false },
+      { x: 100, y: 150, w: 10, h: 160, isBouncy: false },
+      { x: 300, y: 150, w: 10, h: 160, isBouncy: false },
       // Angled Bouncy Funnel to bowl
-      { x: 130, y: 360, w: 16, h: 160, angle: -0.42, isBouncy: true },
-      { x: 270, y: 360, w: 16, h: 160, angle: 0.42, isBouncy: true },
+      { x: 130, y: 360, w: 10, h: 160, angle: -0.42, isBouncy: true },
+      { x: 270, y: 360, w: 10, h: 160, angle: 0.42, isBouncy: true },
     ],
     kibbles: [
       { x: 170, y: 110 }, { x: 190, y: 100 }, { x: 210, y: 110 },
@@ -53,11 +53,11 @@ export const PUZZLE_LEVELS = [
       { x: 250, y: 395, radius: 20, color: "#00f5d4", pulse: 0 },
     ],
     walls: [
-      { x: 90, y: 230, w: 16, h: 250 },
-      { x: 310, y: 230, w: 16, h: 250 },
+      { x: 90, y: 230, w: 10, h: 250 },
+      { x: 310, y: 230, w: 10, h: 250 },
       // Curved funnel chutes
-      { x: 135, y: 420, w: 16, h: 100, angle: -0.32, isBouncy: true },
-      { x: 265, y: 420, w: 16, h: 100, angle: 0.32, isBouncy: true },
+      { x: 135, y: 420, w: 10, h: 100, angle: -0.32, isBouncy: true },
+      { x: 265, y: 420, w: 10, h: 100, angle: 0.32, isBouncy: true },
     ],
     kibbles: [
       { x: 180, y: 80 }, { x: 200, y: 80 }, { x: 220, y: 80 },
@@ -86,11 +86,11 @@ export const PUZZLE_LEVELS = [
       { x: 210, y: 355, radius: 22, color: "#ffbe0b", pulse: 0 },
     ],
     walls: [
-      { x: 80, y: 200, w: 16, h: 220 },
-      { x: 210, y: 130, w: 16, h: 180 }, // divider
-      { x: 330, y: 200, w: 16, h: 220 },
-      { x: 145, y: 395, w: 16, h: 130, angle: -0.38, isBouncy: true },
-      { x: 295, y: 395, w: 16, h: 130, angle: 0.38, isBouncy: true },
+      { x: 80, y: 200, w: 10, h: 220 },
+      { x: 210, y: 130, w: 10, h: 180 }, // divider
+      { x: 330, y: 200, w: 10, h: 220 },
+      { x: 145, y: 395, w: 10, h: 130, angle: -0.38, isBouncy: true },
+      { x: 295, y: 395, w: 10, h: 130, angle: 0.38, isBouncy: true },
     ],
     kibbles: [
       { x: 130, y: 80 }, { x: 150, y: 80 }, { x: 170, y: 80 },
@@ -119,15 +119,15 @@ export const PUZZLE_LEVELS = [
       { x: 280, y: 360, radius: 22, color: "#38bdf8", pulse: 0 },
     ],
     walls: [
-      { x: 70, y: 180, w: 16, h: 220 },
-      { x: 210, y: 260, w: 16, h: 360 }, // Center barrier
-      { x: 350, y: 240, w: 16, h: 320 },
+      { x: 70, y: 180, w: 10, h: 220 },
+      { x: 210, y: 260, w: 10, h: 360 }, // Center barrier
+      { x: 350, y: 240, w: 10, h: 320 },
       // Mud drain slide
-      { x: 120, y: 360, w: 120, h: 16, angle: 0.35, isBouncy: true },
-      { x: 50, y: 480, w: 80, h: 16 },
+      { x: 120, y: 360, w: 120, h: 10, angle: 0.35, isBouncy: true },
+      { x: 50, y: 480, w: 80, h: 10 },
       // Funnel to bowl
-      { x: 235, y: 410, w: 16, h: 90, angle: -0.25, isBouncy: true },
-      { x: 325, y: 410, w: 16, h: 90, angle: 0.25, isBouncy: true },
+      { x: 235, y: 410, w: 10, h: 90, angle: -0.25, isBouncy: true },
+      { x: 325, y: 410, w: 10, h: 90, angle: 0.25, isBouncy: true },
     ],
     kibbles: [
       { x: 260, y: 90 }, { x: 280, y: 90 }, { x: 300, y: 90 },
@@ -159,10 +159,10 @@ export const PUZZLE_LEVELS = [
       { x: 200, y: 350, radius: 26, color: "#a855f7", pulse: 0 },
     ],
     walls: [
-      { x: 90, y: 190, w: 16, h: 220 },
-      { x: 310, y: 190, w: 16, h: 220 },
-      { x: 140, y: 400, w: 16, h: 120, angle: -0.32, isBouncy: true },
-      { x: 260, y: 400, w: 16, h: 120, angle: 0.32, isBouncy: true },
+      { x: 90, y: 190, w: 10, h: 220 },
+      { x: 310, y: 190, w: 10, h: 220 },
+      { x: 140, y: 400, w: 10, h: 120, angle: -0.32, isBouncy: true },
+      { x: 260, y: 400, w: 10, h: 120, angle: 0.32, isBouncy: true },
     ],
     kibbles: [
       { x: 140, y: 80 }, { x: 160, y: 80 }, { x: 150, y: 110 },
@@ -194,13 +194,13 @@ export const PUZZLE_LEVELS = [
       { x: 280, y: 390, radius: 22, color: "#00f5d4", pulse: 0 },
     ],
     walls: [
-      { x: 70, y: 200, w: 16, h: 260 },
-      { x: 210, y: 260, w: 16, h: 360 }, // Center barrier
-      { x: 350, y: 240, w: 16, h: 320 },
-      { x: 120, y: 280, w: 120, h: 16, angle: 0.35, isBouncy: true },
-      { x: 50, y: 480, w: 80, h: 16 },
-      { x: 235, y: 410, w: 16, h: 90, angle: -0.22, isBouncy: true },
-      { x: 325, y: 410, w: 16, h: 90, angle: 0.22, isBouncy: true },
+      { x: 70, y: 200, w: 10, h: 260 },
+      { x: 210, y: 260, w: 10, h: 360 }, // Center barrier
+      { x: 350, y: 240, w: 10, h: 320 },
+      { x: 120, y: 280, w: 120, h: 10, angle: 0.35, isBouncy: true },
+      { x: 50, y: 480, w: 80, h: 10 },
+      { x: 235, y: 410, w: 10, h: 90, angle: -0.22, isBouncy: true },
+      { x: 325, y: 410, w: 10, h: 90, angle: 0.22, isBouncy: true },
     ],
     kibbles: [
       { x: 260, y: 80 }, { x: 280, y: 80 }, { x: 300, y: 80 }, { x: 270, y: 110 }
@@ -232,10 +232,10 @@ export const PUZZLE_LEVELS = [
       { x: 250, y: 350, radius: 22, color: "#38bdf8", pulse: 0 },
     ],
     walls: [
-      { x: 70, y: 200, w: 16, h: 240 },
-      { x: 330, y: 200, w: 16, h: 240 },
-      { x: 130, y: 390, w: 16, h: 140, angle: -0.38, isBouncy: true },
-      { x: 270, y: 390, w: 16, h: 140, angle: 0.38, isBouncy: true },
+      { x: 70, y: 200, w: 10, h: 240 },
+      { x: 330, y: 200, w: 10, h: 240 },
+      { x: 130, y: 390, w: 10, h: 140, angle: -0.38, isBouncy: true },
+      { x: 270, y: 390, w: 10, h: 140, angle: 0.38, isBouncy: true },
     ],
     kibbles: [
       { x: 130, y: 70 }, { x: 150, y: 70 }, { x: 140, y: 100 },
@@ -268,11 +268,11 @@ export const PUZZLE_LEVELS = [
       { x: 260, y: 325, radius: 22, color: "#facc15", pulse: 0 },
     ],
     walls: [
-      { x: 80, y: 240, w: 16, h: 320 },
-      { x: 320, y: 240, w: 16, h: 320 },
-      { x: 240, y: 170, w: 90, h: 14, angle: -0.3, isBouncy: true },
-      { x: 150, y: 260, w: 90, h: 14, angle: 0.3, isBouncy: true },
-      { x: 240, y: 330, w: 90, h: 14, angle: -0.3, isBouncy: true },
+      { x: 80, y: 240, w: 10, h: 320 },
+      { x: 320, y: 240, w: 10, h: 320 },
+      { x: 240, y: 170, w: 90, h: 10, angle: -0.3, isBouncy: true },
+      { x: 150, y: 260, w: 90, h: 10, angle: 0.3, isBouncy: true },
+      { x: 240, y: 330, w: 90, h: 10, angle: -0.3, isBouncy: true },
     ],
     kibbles: [
       { x: 140, y: 60 }, { x: 160, y: 60 }, { x: 180, y: 60 },
@@ -302,9 +302,9 @@ export const PUZZLE_LEVELS = [
       { x: 270, y: 290, radius: 24, color: "#00f5d4", pulse: 0 },
     ],
     walls: [
-      { x: 70, y: 240, w: 16, h: 300 },
-      { x: 330, y: 240, w: 16, h: 300 },
-      { x: 200, y: 240, w: 40, h: 20 },
+      { x: 70, y: 240, w: 10, h: 300 },
+      { x: 330, y: 240, w: 10, h: 300 },
+      { x: 200, y: 240, w: 32, h: 10 },
     ],
     kibbles: [
       { x: 130, y: 70 }, { x: 150, y: 70 }, { x: 140, y: 100 },
@@ -336,12 +336,12 @@ export const PUZZLE_LEVELS = [
       { x: 260, y: 360, radius: 20, color: "#facc15", pulse: 0 },
     ],
     walls: [
-      { x: 70, y: 200, w: 16, h: 220 },
-      { x: 150, y: 120, w: 14, h: 160 },
-      { x: 250, y: 120, w: 14, h: 160 },
-      { x: 330, y: 200, w: 16, h: 220 },
-      { x: 130, y: 390, w: 16, h: 140, angle: -0.35, isBouncy: true },
-      { x: 270, y: 390, w: 16, h: 140, angle: 0.35, isBouncy: true },
+      { x: 70, y: 200, w: 10, h: 220 },
+      { x: 150, y: 120, w: 10, h: 160 },
+      { x: 250, y: 120, w: 10, h: 160 },
+      { x: 330, y: 200, w: 10, h: 220 },
+      { x: 130, y: 390, w: 10, h: 140, angle: -0.35, isBouncy: true },
+      { x: 270, y: 390, w: 10, h: 140, angle: 0.35, isBouncy: true },
     ],
     kibbles: [
       { x: 110, y: 70 }, { x: 120, y: 100 },
@@ -374,11 +374,11 @@ export const PUZZLE_LEVELS = [
       { x: 260, y: 380, radius: 22, color: "#00f5d4", pulse: 0 },
     ],
     walls: [
-      { x: 60, y: 200, w: 16, h: 240 },
-      { x: 190, y: 150, w: 14, h: 190 },
-      { x: 330, y: 200, w: 16, h: 240 },
-      { x: 100, y: 390, w: 90, h: 16, angle: 0.4, isBouncy: true },
-      { x: 40, y: 480, w: 70, h: 16 },
+      { x: 60, y: 200, w: 10, h: 240 },
+      { x: 190, y: 150, w: 10, h: 190 },
+      { x: 330, y: 200, w: 10, h: 240 },
+      { x: 100, y: 390, w: 90, h: 10, angle: 0.4, isBouncy: true },
+      { x: 40, y: 480, w: 70, h: 10 },
     ],
     kibbles: [
       { x: 230, y: 70 }, { x: 250, y: 70 }, { x: 270, y: 70 },
@@ -412,11 +412,11 @@ export const PUZZLE_LEVELS = [
       { x: 260, y: 360, radius: 24, color: "#38bdf8", pulse: 0 },
     ],
     walls: [
-      { x: 70, y: 230, w: 16, h: 320 },
-      { x: 330, y: 230, w: 16, h: 320 },
-      { x: 200, y: 80, w: 14, h: 90 },
-      { x: 130, y: 410, w: 16, h: 120, angle: -0.3, isBouncy: true },
-      { x: 270, y: 410, w: 16, h: 120, angle: 0.3, isBouncy: true },
+      { x: 70, y: 230, w: 10, h: 320 },
+      { x: 330, y: 230, w: 10, h: 320 },
+      { x: 200, y: 80, w: 10, h: 90 },
+      { x: 130, y: 410, w: 10, h: 120, angle: -0.3, isBouncy: true },
+      { x: 270, y: 410, w: 10, h: 120, angle: 0.3, isBouncy: true },
     ],
     kibbles: [
       { x: 110, y: 50 }, { x: 130, y: 50 },
@@ -449,10 +449,10 @@ export const PUZZLE_LEVELS = [
       { x: 270, y: 290, radius: 22, color: "#00f5d4", pulse: 0 },
     ],
     walls: [
-      { x: 60, y: 230, w: 16, h: 300 },
-      { x: 340, y: 230, w: 16, h: 300 },
-      { x: 140, y: 410, w: 16, h: 130, angle: -0.3, isBouncy: true },
-      { x: 260, y: 410, w: 16, h: 130, angle: 0.3, isBouncy: true },
+      { x: 60, y: 230, w: 10, h: 300 },
+      { x: 340, y: 230, w: 10, h: 300 },
+      { x: 140, y: 410, w: 10, h: 130, angle: -0.3, isBouncy: true },
+      { x: 260, y: 410, w: 10, h: 130, angle: 0.3, isBouncy: true },
     ],
     kibbles: [
       { x: 120, y: 70 }, { x: 140, y: 70 }, { x: 130, y: 95 },
@@ -486,8 +486,8 @@ export const PUZZLE_LEVELS = [
       { x: 200, y: 320, radius: 20, color: "#facc15", pulse: 0 },
     ],
     walls: [
-      { x: 70, y: 240, w: 16, h: 340 },
-      { x: 330, y: 240, w: 16, h: 340 },
+      { x: 70, y: 240, w: 10, h: 340 },
+      { x: 330, y: 240, w: 10, h: 340 },
     ],
     kibbles: [
       { x: 130, y: 65 }, { x: 150, y: 65 }, { x: 170, y: 65 },
@@ -523,11 +523,11 @@ export const PUZZLE_LEVELS = [
       { x: 200, y: 350, radius: 24, color: "#facc15", pulse: 0 },
     ],
     walls: [
-      { x: 60, y: 240, w: 16, h: 340 },
-      { x: 340, y: 240, w: 16, h: 340 },
-      { x: 200, y: 80, w: 14, h: 100 },
-      { x: 130, y: 420, w: 16, h: 110, angle: -0.32, isBouncy: true },
-      { x: 270, y: 420, w: 16, h: 110, angle: 0.32, isBouncy: true },
+      { x: 60, y: 240, w: 10, h: 340 },
+      { x: 340, y: 240, w: 10, h: 340 },
+      { x: 200, y: 80, w: 10, h: 100 },
+      { x: 130, y: 420, w: 10, h: 110, angle: -0.32, isBouncy: true },
+      { x: 270, y: 420, w: 10, h: 110, angle: 0.32, isBouncy: true },
     ],
     kibbles: [
       { x: 110, y: 55 }, { x: 130, y: 55 }, { x: 150, y: 55 },

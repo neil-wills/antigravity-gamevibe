@@ -796,29 +796,29 @@ export default function PinGameCanvas({
         ctx.save();
         ctx.translate(w.position.x, w.position.y);
         ctx.rotate(w.angle);
-        const wWidth = w.bounds.max.x - w.bounds.min.x;
-        const wHeight = w.bounds.max.y - w.bounds.min.y;
+        const wWidth = w.customWallData ? w.customWallData.w : (w.bounds.max.x - w.bounds.min.x);
+        const wHeight = w.customWallData ? w.customWallData.h : (w.bounds.max.y - w.bounds.min.y);
 
         const isBouncy = w.customWallData?.isBouncy;
         if (isBouncy) {
-          // Bouncy wall: vibrant rubber cushion look with glow
+          // Sleek Bouncy wall: slim vibrant rubber cushion with subtle glow
           ctx.save();
           ctx.shadowColor = w.customWallData.color || '#06d6a0';
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 8;
           ctx.fillStyle = w.customWallData.color || '#06d6a0';
           ctx.beginPath();
-          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 8);
+          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 4);
           ctx.fill();
           ctx.restore();
 
-          // Diagonal neon candy stripes
+          // Subtle diagonal candy pinstripes
           ctx.save();
           ctx.beginPath();
-          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 8);
+          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 4);
           ctx.clip();
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-          ctx.lineWidth = 3;
-          for (let sx = -wWidth - wHeight; sx < wWidth + wHeight; sx += 14) {
+          ctx.lineWidth = 2;
+          for (let sx = -wWidth - wHeight; sx < wWidth + wHeight; sx += 10) {
             ctx.beginPath();
             ctx.moveTo(sx, -wHeight / 2);
             ctx.lineTo(sx + wHeight, wHeight / 2);
@@ -827,17 +827,17 @@ export default function PinGameCanvas({
           ctx.restore();
 
           ctx.strokeStyle = '#047857';
-          ctx.lineWidth = 2.5;
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 8);
+          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 4);
           ctx.stroke();
         } else {
-          // Standard wall
+          // Sleek Standard barrier
           ctx.fillStyle = w.customWallData?.color || '#8b5a2b';
           ctx.strokeStyle = '#5c3a1e';
-          ctx.lineWidth = 3;
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 6);
+          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 4);
           ctx.fill();
           ctx.stroke();
         }
