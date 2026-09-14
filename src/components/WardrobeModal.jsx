@@ -12,10 +12,22 @@ export default function WardrobeModal({
   const [currentBreed, setCurrentBreed] = useState(selectedBreed);
   const [currentWardrobe, setCurrentWardrobe] = useState({ ...wardrobe });
   const [activeTab, setActiveTab] = useState('hats');
+  const [dogState, setDogState] = useState('idle');
+  const [barkBubble, setBarkBubble] = useState(null);
+
+  const handleDogBark = () => {
+    AudioFX.playBreedBark(currentBreed);
+    const phrases = ['Woof! 🐾', 'Arf! 🦴', 'Awoo! ❤️', 'Ruff! ✨', 'Yip! 🐶', 'Bork! 🎾'];
+    setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+    setTimeout(() => setBarkBubble(null), 1200);
+
+    setDogState('barking');
+    setTimeout(() => setDogState('idle'), 420);
+  };
 
   const handleSelectBreed = (breedId) => {
     setCurrentBreed(breedId);
-    AudioFX.playBark(breedId === 'tuck' ? 1.05 : breedId === 'waffles' ? 1.3 : 1.0);
+    AudioFX.playBreedBark(breedId);
   };
 
   const handleEquipItem = (category, itemId) => {
@@ -27,7 +39,7 @@ export default function WardrobeModal({
   };
 
   const handleSaveAndClose = () => {
-    AudioFX.playBark(1.1);
+    AudioFX.playBreedBark(currentBreed);
     onSave(currentBreed, currentWardrobe);
     onClose();
   };
@@ -71,17 +83,46 @@ export default function WardrobeModal({
             <div className="wardrobe-layout">
               {/* Dog Stage */}
               <div className="dog-stage">
-                <DogRenderer
-                  breedId={currentBreed}
-                  wardrobe={currentWardrobe}
-                  size={160}
-                />
+                <div
+                  className="dog-interactive"
+                  onClick={handleDogBark}
+                  style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}
+                  title={`Click ${activeBreedObj.name} to hear them bark! 🐶`}
+                >
+                  {/* Cartoon Bark Speech Bubble */}
+                  {barkBubble && (
+                    <div className="dog-bark-bubble">
+                      <span>{barkBubble}</span>
+                      <div className="bark-bubble-tail" />
+                    </div>
+                  )}
+
+                  <DogRenderer
+                    breedId={currentBreed}
+                    wardrobe={currentWardrobe}
+                    state={dogState}
+                    size={160}
+                  />
+                </div>
                 <div className="dog-stage-platform" />
-                <div className="dog-stage-name">
+                <div className="dog-stage-name" onClick={handleDogBark} style={{ cursor: 'pointer' }}>
                   {activeBreedObj.name} 🐶
                 </div>
                 <div className="dog-stage-breed">{activeBreedObj.title}</div>
-                <div style={{ fontSize: '0.78rem', color: '#888', marginTop: '4px', textAlign: 'center' }}>
+                <div
+                  onClick={handleDogBark}
+                  style={{
+                    fontSize: '0.78rem',
+                    color: '#ff4d6d',
+                    fontWeight: 700,
+                    marginTop: '4px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🎵 Tap dog to hear them bark!
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#888', marginTop: '2px', textAlign: 'center' }}>
                   {activeBreedObj.desc}
                 </div>
               </div>

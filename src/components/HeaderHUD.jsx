@@ -23,13 +23,16 @@ export default function HeaderHUD({
       <div className="hud-left">
         <button
           className="dog-profile-btn"
-          onClick={onOpenWardrobe}
-          title="Dress up your dog!"
+          onClick={() => {
+            AudioFX.playBreedBark(currentBreed);
+            onOpenWardrobe();
+          }}
+          title={`Dress up ${breedObj.name} or tap to bark!`}
         >
           <div className="dog-avatar-mini">
             <DogRenderer breedId={currentBreed} wardrobe={wardrobe} size={30} />
           </div>
-          <span className="dog-profile-name">{breedObj.name} 👗</span>
+          <span className="dog-profile-name">{breedObj.name} 🐶</span>
         </button>
 
         {/* Level Indicator button */}

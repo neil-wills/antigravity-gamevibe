@@ -16,6 +16,16 @@ export default function DogParkGame({
   const [gameOver, setGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false);
   const [resetCount, setResetCount] = useState(0);
+  const [barkBubble, setBarkBubble] = useState(null);
+
+  const handleDogBark = (e) => {
+    if (e) e.stopPropagation();
+    handleJump();
+    AudioFX.playBreedBark(selectedBreed);
+    const phrases = ['Woof! 🐾', 'Jump! 🦴', 'Awoo! ❤️', 'Ruff! 🏆', 'Yip! 🐶'];
+    setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+    setTimeout(() => setBarkBubble(null), 1200);
+  };
 
   const GOAL_BISCUITS = 8;
   const canvasRef = useRef(null);
@@ -287,20 +297,29 @@ export default function DogParkGame({
       >
         <canvas ref={canvasRef} className="arcade-canvas" />
 
-        {/* Animated Dog Jumping/Running */}
+        {/* Animated Dog Jumping/Running - Click to Bark & Jump! */}
         <div
+          className="dog-interactive"
+          onClick={handleDogBark}
           style={{
             position: 'absolute',
             left: 70,
             top: state.current.dogY - 70,
-            pointerEvents: 'none',
             zIndex: 15,
           }}
+          title="Click to pet & hear your pup bark! 🐶"
         >
+          {barkBubble && (
+            <div className="dog-bark-bubble">
+              <span>{barkBubble}</span>
+              <div className="bark-bubble-tail" />
+            </div>
+          )}
+
           <DogRenderer
             breedId={selectedBreed}
             wardrobe={wardrobe}
-            state={gameWon ? 'eating' : state.current.isJumping ? 'eating' : 'walking'}
+            state={barkBubble ? 'barking' : gameWon ? 'eating' : state.current.isJumping ? 'eating' : 'walking'}
             size={110}
           />
         </div>

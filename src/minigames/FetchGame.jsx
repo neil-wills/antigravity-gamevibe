@@ -35,12 +35,22 @@ export default function FetchGame({
     flip: false,
     hasBall: false,
   });
+  const [barkBubble, setBarkBubble] = useState(null);
+
+  const handleDogBark = (e) => {
+    if (e) e.stopPropagation();
+    AudioFX.playBreedBark(selectedBreed);
+    const phrases = ['Fetch! 🎾', 'Woof! 🐾', 'Arf arf! 🦴', 'Throw it! ✨', 'Awoo! ❤️'];
+    setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+    setTimeout(() => setBarkBubble(null), 1200);
+  };
 
   const handleRestart = () => {
     AudioFX.playPinSlide();
     setScore(0);
     setCatches(0);
     setGameWon(false);
+    setBarkBubble(null);
     gameState.current.ball = { x: 80, y: 380, vx: 0, vy: 0, active: false, inAir: false };
     gameState.current.dog = { x: 70, y: 380, vx: 0, state: 'idle', facing: 1, holdingItem: false };
     setResetCount((c) => c + 1);
@@ -324,20 +334,29 @@ export default function FetchGame({
       <div className="arcade-viewport">
         <canvas ref={canvasRef} className="arcade-canvas" />
 
-        {/* Animated Dog rendered at ground level */}
+        {/* Animated Dog rendered at ground level - Click to Bark! */}
         <div
+          className="dog-interactive"
+          onClick={handleDogBark}
           style={{
             position: 'absolute',
             left: dogDisplay.x - 70,
             top: 310,
-            pointerEvents: 'none',
-            zIndex: 12,
+            zIndex: 15,
           }}
+          title="Click to pet & hear your pup bark! 🐶"
         >
+          {barkBubble && (
+            <div className="dog-bark-bubble">
+              <span>{barkBubble}</span>
+              <div className="bark-bubble-tail" />
+            </div>
+          )}
+
           <DogRenderer
             breedId={selectedBreed}
             wardrobe={wardrobe}
-            state={dogDisplay.state}
+            state={barkBubble ? 'barking' : dogDisplay.state}
             flip={dogDisplay.flip}
             size={120}
           />

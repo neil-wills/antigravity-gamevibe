@@ -26,11 +26,13 @@ export default function PinGameCanvas({
   const [kibbleInBowl, setKibbleInBowl] = useState(0);
   const [treatsInBowl, setTreatsInBowl] = useState(0);
   const [levelState, setLevelState] = useState('playing'); // 'playing' | 'victory' | 'failed'
-  const [dogState, setDogState] = useState('idle'); // 'idle' | 'walking' | 'eating' | 'pooping'
+  const [dogState, setDogState] = useState('idle'); // 'idle' | 'walking' | 'eating' | 'pooping' | 'barking'
   const [dogPos, setDogPos] = useState({ x: 80, y: 460 });
   const [pawPrints, setPawPrints] = useState([]);
   const [poopEvent, setPoopEvent] = useState(null); // null or { x, y }
   const [floatingPoints, setFloatingPoints] = useState([]);
+  const [barkBubble, setBarkBubble] = useState(null);
+  const barkTimerRef = useRef(null);
 
   // Movable Food Bowl State
   const initialBowlData = (PUZZLE_LEVELS.find((l) => l.id === levelId) || PUZZLE_LEVELS[0]).bowl;
@@ -1142,6 +1144,48 @@ export default function PinGameCanvas({
     setDogState('idle');
     setPoopEvent(null);
     setPawPrints([]);
+    setBarkBubble(null);
+  };
+
+  const handleDogBark = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+
+    AudioFX.playBreedBark(selectedBreed);
+
+    const phrases = [
+      'Woof! 🐾',
+      'Arf arf! 🦴',
+      'Ruff! ✨',
+      'Awoo! ❤️',
+      'Yip yip! 🐶',
+      'Bork! 🍖',
+    ];
+    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+    setBarkBubble(phrase);
+
+    if (barkTimerRef.current) clearTimeout(barkTimerRef.current);
+    barkTimerRef.current = setTimeout(() => {
+      setBarkBubble(null);
+    }, 1300);
+
+    if (dogState === 'idle') {
+      setDogState('barking');
+      setTimeout(() => {
+        setDogState((cur) => (cur === 'barking' ? 'idle' : cur));
+      }, 420);
+    }
+
+    setFloatingPoints((prev) => [
+      ...prev.slice(-3),
+      { id: Date.now() + Math.random(), x: dogPos.x, y: dogPos.y - 45, text: '💖 +5 Pet Bonus!' },
+    ]);
+
+    if (onAddPoints) {
+      onAddPoints(5);
+    }
   };
 
   const handleRestart = () => {
@@ -1153,6 +1197,7 @@ export default function PinGameCanvas({
     setDogState('idle');
     setPoopEvent(null);
     setPawPrints([]);
+    setBarkBubble(null);
   };
 
   return (
@@ -1264,16 +1309,26 @@ export default function PinGameCanvas({
           </div>
         )}
 
-        {/* Animated Cartoon Dog at Ground Position */}
+        {/* Animated Cartoon Dog at Ground Position - Click to Bark! */}
         <div
+          className="dog-interactive"
+          onClick={handleDogBark}
           style={{
             position: 'absolute',
             left: dogPos.x - 70,
             top: dogPos.y - 70,
-            pointerEvents: 'none',
-            zIndex: 15,
+            zIndex: 25,
           }}
+          title={`Click ${selectedBreed === 'tuck' ? 'Tuck' : selectedBreed} to pet & make them bark! 🐶`}
         >
+          {/* Cartoon Bark Speech Bubble */}
+          {barkBubble && (
+            <div className="dog-bark-bubble">
+              <span>{barkBubble}</span>
+              <div className="bark-bubble-tail" />
+            </div>
+          )}
+
           <DogRenderer
             breedId={selectedBreed}
             wardrobe={wardrobe}

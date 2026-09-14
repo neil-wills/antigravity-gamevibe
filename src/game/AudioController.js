@@ -28,37 +28,79 @@ class SoundController {
     return this.muted;
   }
 
-  // Playful dog bark
-  playBark(pitchMultiplier = 1.0) {
+  // Playful, resonant cartoon dog bark with rich dual-harmonic acoustic body
+  playBark(pitchMultiplier = 1.0, isDouble = null) {
     if (this.muted) return;
     this.init();
     if (!this.ctx) return;
 
+    const playSingleBark = (startTime, pitch, volume = 0.32) => {
+      const t = startTime;
+
+      // Primary body oscillator (throat / vocal formant)
+      const osc1 = this.ctx.createOscillator();
+      const gain1 = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc1.type = 'triangle';
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(650 * pitch, t);
+      filter.Q.setValueAtTime(2.8, t);
+
+      // Natural pitch drop contour
+      osc1.frequency.setValueAtTime(480 * pitch, t);
+      osc1.frequency.exponentialRampToValueAtTime(160 * pitch, t + 0.13);
+
+      gain1.gain.setValueAtTime(0.01, t);
+      gain1.gain.linearRampToValueAtTime(volume, t + 0.015);
+      gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+      osc1.connect(filter);
+      filter.connect(gain1);
+      gain1.connect(this.ctx.destination);
+
+      osc1.start(t);
+      osc1.stop(t + 0.16);
+
+      // Secondary chest/sub resonance for warm acoustic canine punch
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this.ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(220 * pitch, t);
+      osc2.frequency.exponentialRampToValueAtTime(110 * pitch, t + 0.11);
+
+      gain2.gain.setValueAtTime(0.01, t);
+      gain2.gain.linearRampToValueAtTime(volume * 0.45, t + 0.015);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+
+      osc2.connect(gain2);
+      gain2.connect(this.ctx.destination);
+
+      osc2.start(t);
+      osc2.stop(t + 0.14);
+    };
+
     const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    const filter = this.ctx.createBiquadFilter();
+    playSingleBark(t, pitchMultiplier, 0.32);
 
-    osc.type = 'triangle';
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(600 * pitchMultiplier, t);
-    filter.Q.setValueAtTime(3, t);
+    // Random or requested double woof ("Woof-woof!")
+    const shouldDouble = isDouble !== null ? isDouble : Math.random() < 0.4;
+    if (shouldDouble) {
+      playSingleBark(t + 0.13, pitchMultiplier * 1.08, 0.28);
+    }
+  }
 
-    // Bark pitch contour (quick pitch drop)
-    osc.frequency.setValueAtTime(450 * pitchMultiplier, t);
-    osc.frequency.exponentialRampToValueAtTime(180 * pitchMultiplier, t + 0.12);
-
-    // Volume envelope
-    gain.gain.setValueAtTime(0.01, t);
-    gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    osc.start(t);
-    osc.stop(t + 0.16);
+  // Play breed-tuned bark
+  playBreedBark(breedId = 'tuck') {
+    const pitches = {
+      tuck: 0.94,     // Warm, bouncy doodle woof
+      waffles: 1.26,  // Energetic, high-spirited corgi yip
+      barnaby: 0.82,  // Hearty, deep golden retriever bark
+      buster: 1.10,   // Playful frenchie snort-woof
+      mochi: 1.25,    // Sassy shiba inu awoo/yip
+      coco: 1.34,     // Bright, melodic poodle bark
+    };
+    this.playBark(pitches[breedId] || 1.0);
   }
 
   // Pin sliding out sound (crisp metallic cotter-pin slide & swoosh)

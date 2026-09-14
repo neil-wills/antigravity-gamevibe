@@ -17,6 +17,15 @@ export default function PoopPatrolGame({
   const [grassMowedPct, setGrassMowedPct] = useState(0);
   const [gameWon, setGameWon] = useState(false);
   const [gameResetCount, setGameResetCount] = useState(0);
+  const [barkBubble, setBarkBubble] = useState(null);
+
+  const handleDogBark = (e) => {
+    if (e) e.stopPropagation();
+    AudioFX.playBreedBark(selectedBreed);
+    const phrases = ['Good job! 🐾', 'Woof! 🚜', 'Clean lawn! 🌻', 'Ruff! ✨', 'Yip! 🐶'];
+    setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+    setTimeout(() => setBarkBubble(null), 1200);
+  };
 
   const TOTAL_GOAL_POOPS = 10;
   const canvasRef = useRef(null);
@@ -493,20 +502,29 @@ export default function PoopPatrolGame({
       <div className="arcade-viewport">
         <canvas ref={canvasRef} className="arcade-canvas" />
 
-        {/* Dog spectator in garden corner */}
+        {/* Dog spectator in garden corner - Click to Bark! */}
         <div
+          className="dog-interactive"
+          onClick={handleDogBark}
           style={{
             position: 'absolute',
             right: 12,
             bottom: 12,
-            pointerEvents: 'none',
-            zIndex: 10,
+            zIndex: 15,
           }}
+          title="Click to hear your pup cheer & bark! 🐶"
         >
+          {barkBubble && (
+            <div className="dog-bark-bubble">
+              <span>{barkBubble}</span>
+              <div className="bark-bubble-tail" />
+            </div>
+          )}
+
           <DogRenderer
             breedId={selectedBreed}
             wardrobe={wardrobe}
-            state={gameWon ? 'eating' : 'idle'}
+            state={barkBubble ? 'barking' : gameWon ? 'eating' : 'idle'}
             flip={true}
             size={90}
           />

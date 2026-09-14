@@ -447,3 +447,87 @@ html, body {
     font-size: 0.78rem;
   }
 }
+
+/* =========================================
+   Interactive Cartoon Dog & Barking System
+   ========================================= */
+
+/* Clickable Dog Hover Effects */
+.dog-interactive {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.2s var(--ease-bouncy), filter 0.2s ease;
+}
+
+.dog-interactive:hover {
+  transform: scale(1.06);
+  filter: drop-shadow(0 6px 14px rgba(255, 77, 109, 0.35));
+}
+
+.dog-interactive:active {
+  transform: scale(0.96);
+}
+
+/* Joyful Bark Hop Animation */
+@keyframes dogBarkHop {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-10px) scale(1.07, 0.95); }
+  65% { transform: translateY(-2px) scale(0.97, 1.04); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.dog-svg-wrapper.barking {
+  animation: dogBarkHop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Cartoon Bark Speech Bubble */
+.dog-bark-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: #ffffff;
+  color: #1f2937;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 6px 14px;
+  border-radius: 18px;
+  border: 2.5px solid #2b2b2b;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  animation: barkPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.bark-bubble-tail {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 9px solid #2b2b2b;
+}
+
+.bark-bubble-tail::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: -6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid #ffffff;
+}
+
+@keyframes barkPop {
+  0% { transform: translateX(-50%) translateY(0px) scale(0.4); opacity: 0; }
+  60% { transform: translateX(-50%) translateY(-14px) scale(1.15); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-10px) scale(1); opacity: 1; }
+}

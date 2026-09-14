@@ -103,10 +103,11 @@ export const ACCESSORIES = {
 export default function DogRenderer({
   breedId = 'tuck',
   wardrobe = { hat: 'party', collar: 'bandana', glasses: 'none', boots: 'none' },
-  state = 'idle', // 'idle' | 'walking' | 'eating' | 'pooping'
+  state = 'idle', // 'idle' | 'walking' | 'eating' | 'pooping' | 'barking'
   size = 140,
   flip = false,
   className = '',
+  onClick,
 }) {
   const [blink, setBlink] = useState(false);
   const [tailTick, setTailTick] = useState(0);
@@ -136,13 +137,16 @@ export default function DogRenderer({
   const currentTailAngle =
     state === 'eating'
       ? 28
+      : state === 'barking'
+      ? tailAngles[tailTick] * 1.5 + 8
       : state === 'walking'
       ? tailAngles[tailTick] * 1.3
       : tailAngles[tailTick];
 
   return (
     <div
-      className={`dog-svg-wrapper ${className}`}
+      className={`dog-svg-wrapper ${state === 'barking' ? 'barking' : ''} ${className}`}
+      onClick={onClick}
       style={{
         width: size,
         height: size,
@@ -151,6 +155,7 @@ export default function DogRenderer({
         justifyContent: 'center',
         transform: flip ? 'scaleX(-1)' : 'none',
         transition: 'transform 0.2s',
+        cursor: onClick ? 'pointer' : 'inherit',
       }}
     >
       <svg
@@ -569,6 +574,18 @@ export default function DogRenderer({
                 <g>
                   <path d="M 89 74 Q 96 84 103 74" fill="#d90429" stroke="#1c1917" strokeWidth="1.8" />
                   <ellipse cx="96" cy="78" rx="4" ry="3.5" fill="#ff758f" />
+                </g>
+              ) : state === 'barking' ? (
+                // Open joyful barking mouth with tongue, teeth, and vocal sound waves
+                <g>
+                  <path d="M 88 73 Q 96 86 104 73 Z" fill="#9d0208" stroke="#1c1917" strokeWidth="2" />
+                  <ellipse cx="96" cy="79" rx="4.5" ry="3.6" fill="#ff758f" />
+                  {/* Little puppy canine teeth */}
+                  <polygon points="90,73 92,76 94,73" fill="#ffffff" />
+                  <polygon points="98,73 100,76 102,73" fill="#ffffff" />
+                  {/* Sound vibration waves */}
+                  <path d="M 112 68 Q 117 72 112 77" stroke="#ff4d6d" strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.9" />
+                  <path d="M 117 64 Q 124 72 117 81" stroke="#ff4d6d" strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.7" />
                 </g>
               ) : (
                 // Happy resting puppy smile with cute panting tongue
