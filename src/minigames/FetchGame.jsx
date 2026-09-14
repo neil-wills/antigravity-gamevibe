@@ -387,6 +387,122 @@ function drawCartoonSquirrel(ctx, x, y, facing = 1, runPhase = 0, scale = 1.0) {
   ctx.restore();
 }
 
+// Accurately simulates the ball/frisbee trajectory including wall bounces to find exact landing target
+function computeLandingTarget(startX, startY, vx, vy, gravity, groundY, width, ballRadius) {
+  let simX = startX;
+  let simY = startY;
+  let simVx = vx;
+  let simVy = vy;
+  const points = [{ x: simX, y: simY }];
+
+  for (let step = 0; step < 180; step++) {
+    simX += simVx;
+    simY += simVy;
+    simVy += gravity;
+    simVx *= 0.997;
+
+    // Right wall bounce
+    if (simX >= width - ballRadius - 8) {
+      simX = width - ballRadius - 8;
+      simVx = -Math.abs(simVx) * 0.88;
+    }
+    // Left wall bounce
+    if (simX <= ballRadius + 8) {
+      simX = ballRadius + 8;
+      simVx = Math.abs(simVx) * 0.88;
+    }
+
+    if (step % 2 === 0 || simY >= groundY - ballRadius) {
+      points.push({ x: simX, y: simY });
+    }
+
+    // Ground impact reached
+    if (simY >= groundY - ballRadius) {
+      return {
+        landingX: Math.max(ballRadius + 20, Math.min(width - ballRadius - 20, simX)),
+        points,
+      };
+    }
+  }
+
+  return {
+    landingX: Math.max(ballRadius + 20, Math.min(width - ballRadius - 20, simX)),
+    points,
+  };
+}
+
+// Renders the dynamic Catch Zone that tracks where the ball/throw targets
+function drawCatchZone(ctx, x, groundY, pulse, isHot, label = '🎯 CATCH ZONE') {
+  ctx.save();
+
+  // 1. Upward tracking light beacon shining from grass into the sky
+  const beaconGrad = ctx.createLinearGradient(x, groundY, x, groundY - 160);
+  beaconGrad.addColorStop(0, isHot ? 'rgba(0, 245, 212, 0.40)' : 'rgba(255, 0, 110, 0.25)');
+  beaconGrad.addColorStop(0.5, isHot ? 'rgba(0, 245, 212, 0.15)' : 'rgba(255, 0, 110, 0.08)');
+  beaconGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = beaconGrad;
+  ctx.beginPath();
+  ctx.moveTo(x - 30, groundY - 2);
+  ctx.lineTo(x - 12, groundY - 160);
+  ctx.lineTo(x + 12, groundY - 160);
+  ctx.lineTo(x + 30, groundY - 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // 2. Outer Pulsing Radar Ring on the lawn
+  ctx.strokeStyle = isHot ? '#00f5d4' : '#ff006e';
+  ctx.lineWidth = isHot ? 3 : 2.5;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  const outerRx = 32 + pulse;
+  const outerRy = 9 + pulse * 0.25;
+  ctx.ellipse(x, groundY - 3, outerRx, outerRy, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 3. Inner Solid Target Ring
+  ctx.setLineDash([]);
+  ctx.strokeStyle = isHot ? '#38bdf8' : '#ffbe0b';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(x, groundY - 3, 18, 5.5, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 4. Glowing Bullseye Center Dot
+  ctx.fillStyle = isHot ? '#00f5d4' : '#ff006e';
+  ctx.beginPath();
+  ctx.arc(x, groundY - 3, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 5. Target Crosshairs on Ground
+  ctx.strokeStyle = isHot ? '#00f5d4' : '#ff006e';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - outerRx - 6, groundY - 3);
+  ctx.lineTo(x - outerRx + 4, groundY - 3);
+  ctx.moveTo(x + outerRx - 4, groundY - 3);
+  ctx.lineTo(x + outerRx + 6, groundY - 3);
+  ctx.stroke();
+
+  // 6. Floating High-Contrast Badge Pill
+  const badgeY = groundY + 16;
+  ctx.font = 'bold 11px Fredoka, sans-serif';
+  const textW = ctx.measureText(label).width;
+
+  ctx.fillStyle = isHot ? 'rgba(13, 148, 136, 0.95)' : 'rgba(219, 39, 119, 0.95)';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(x - textW / 2 - 10, badgeY - 12, textW + 20, 18, 9);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x, badgeY + 1);
+
+  ctx.restore();
+}
+
 export default function FetchGame({
   selectedBreed = 'tuck',
   wardrobe = {},
@@ -447,6 +563,7 @@ export default function FetchGame({
     width: 600,
     height: 480,
     tick: 0,
+    catchZoneX: 420,
     celebrationParticles: [],
   });
 
@@ -544,6 +661,7 @@ export default function FetchGame({
     gameState.current.critterCooldown = 180;
     gameState.current.critterParticles = [];
     gameState.current.celebrationParticles = [];
+    gameState.current.catchZoneX = 420;
     setResetCount((c) => c + 1);
   };
 
@@ -834,48 +952,82 @@ export default function FetchGame({
       ctx.lineTo(pocketX, pocketY);
       ctx.stroke();
 
-      // 4. Predictive Parabolic Trajectory Arc (when aiming)
+      // 4. Real-time Dynamic Catch Zone & Trajectory Arc
+      const gravity = itemType === 'ball' ? 0.35 : 0.16;
+      const ballRadius = itemType === 'ball' ? 16 : 24;
+      let targetLandingX = gs.catchZoneX || 420;
+      let trajectoryPoints = null;
+
       if (isAiming) {
-        const gravity = itemType === 'ball' ? 0.32 : 0.14;
-        const trajVx = gs.slingshot.aimVx;
-        const trajVy = gs.slingshot.aimVy;
+        // Aiming with slingshot: project where this release will land
+        const aimResult = computeLandingTarget(
+          pocketX,
+          pocketY,
+          gs.slingshot.aimVx,
+          gs.slingshot.aimVy,
+          gravity,
+          gs.groundY,
+          width,
+          ballRadius
+        );
+        targetLandingX = aimResult.landingX;
+        trajectoryPoints = aimResult.points;
+      } else if (gs.ball.active) {
+        // Ball in flight: continuously project where ball targets to land/bounce
+        const flightResult = computeLandingTarget(
+          gs.ball.x,
+          gs.ball.y,
+          gs.ball.vx,
+          gs.ball.vy,
+          gravity,
+          gs.groundY,
+          width,
+          ballRadius
+        );
+        targetLandingX = flightResult.landingX;
+        trajectoryPoints = flightResult.points;
+      } else {
+        // Ready on stand
+        targetLandingX = 420;
+      }
 
-        let landingX = LAUNCH_X;
+      // Smooth tracking towards target landing position
+      gs.catchZoneX = (gs.catchZoneX || 420) + (targetLandingX - (gs.catchZoneX || 420)) * 0.35;
+
+      // Draw Predictive Trajectory Guide Dots when aiming
+      if (isAiming && trajectoryPoints && trajectoryPoints.length > 1) {
         ctx.save();
-        for (let step = 1; step <= 20; step++) {
-          const t = step * 1.8;
-          const px = LAUNCH_X + trajVx * t;
-          const py = LAUNCH_Y + trajVy * t + 0.5 * gravity * t * t;
-
-          if (py >= gs.groundY - 10) {
-            landingX = px;
-            break;
-          }
-
-          // Glowing trajectory dots
-          ctx.fillStyle = step % 2 === 0 ? '#ffbe0b' : '#00f5d4';
+        trajectoryPoints.forEach((pt, idx) => {
+          if (idx === 0) return;
+          ctx.fillStyle = idx % 2 === 0 ? '#ffbe0b' : '#00f5d4';
           ctx.beginPath();
-          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+          ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2);
           ctx.fill();
-        }
+        });
         ctx.restore();
-
-        // Pulsing Landing Target Reticle on the grass
-        const pulse = Math.sin(gs.tick * 0.15) * 4;
+      } else if (gs.ball.active && trajectoryPoints && trajectoryPoints.length > 2) {
+        // Dotted flight trajectory to the tracking catch zone
         ctx.save();
-        ctx.strokeStyle = '#ff006e';
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = itemType === 'ball' ? 'rgba(204, 255, 0, 0.45)' : 'rgba(255, 0, 110, 0.45)';
+        ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
-        ctx.ellipse(landingX, gs.groundY - 3, 24 + pulse, 7 + pulse * 0.3, 0, 0, Math.PI * 2);
+        ctx.moveTo(gs.ball.x, gs.ball.y);
+        for (let i = 1; i < trajectoryPoints.length; i += 2) {
+          ctx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+        }
         ctx.stroke();
-
-        ctx.fillStyle = '#ff006e';
-        ctx.font = 'bold 11px Fredoka, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('🎯 CATCH ZONE', landingX, gs.groundY + 16);
         ctx.restore();
       }
+
+      // Render the Tracking Catch Zone
+      const pulse = Math.sin(gs.tick * 0.15) * 4;
+      const isHot = gs.ball.active && (
+        (Math.abs(gs.ball.x - gs.catchZoneX) < 50 && gs.ball.y > gs.groundY - 120) ||
+        Math.abs(gs.dog.x - gs.catchZoneX) < 45
+      );
+      const zoneLabel = isHot ? '🐾 IN CATCH ZONE!' : '🎯 CATCH ZONE';
+      drawCatchZone(ctx, gs.catchZoneX, gs.groundY, pulse, isHot, zoneLabel);
 
       // 5. Item State 1: Ready to Throw (sitting visibly on the launch stand)
       if (!gs.ball.active && !gs.dog.holdingItem) {
@@ -990,13 +1142,18 @@ export default function FetchGame({
           drawFrisbee(ctx, gs.ball.x, gs.ball.y, 48, 18, tilt, gs.ball.spinRot);
         }
 
-        // 7. Eager Running & Leaping Dog AI (Dog chases the bouncing ball across the field!)
-        const dogSpeed = 9.4; // Energetic sprint to track bouncing ball
+        // 7. Eager Running & Leaping Dog AI (Dog chases to the Catch Zone!)
+        const dogSpeed = 9.6;
         if (!gs.dog.holdingItem && !gs.critter) {
-          const dx = gs.ball.x - gs.dog.x;
+          // While ball is high in flight, dog anticipates and sprints toward the projected Catch Zone!
+          // As ball descends near ground, dog zeroes directly in on the ball for interception!
+          const targetX = (gs.ball.y < gs.groundY - 80 && Math.abs(gs.ball.x - (gs.catchZoneX || 420)) > 20)
+            ? ((gs.catchZoneX || 420) * 0.72 + gs.ball.x * 0.28)
+            : gs.ball.x;
+          const dx = targetX - gs.dog.x;
 
-          // Dog runs towards the bouncing ball
-          if (Math.abs(dx) > 10) {
+          // Dog runs towards target
+          if (Math.abs(dx) > 8) {
             gs.dog.x += Math.sign(dx) * Math.min(Math.abs(dx), dogSpeed);
             gs.dog.facing = dx > 0 ? 1 : -1;
             gs.dog.state = 'walking';
@@ -1035,26 +1192,40 @@ export default function FetchGame({
             AudioFX.playCatch();
             AudioFX.playBreedBark(selectedBreed);
 
+            const inZone = Math.abs(gs.dog.x - (gs.catchZoneX || 420)) < 60;
+            const pointsEarned = inZone ? 100 : 50;
+
             // Trigger celebration sparkle burst
-            for (let i = 0; i < 16; i++) {
-              const angle = (Math.PI * 2 / 16) * i;
+            const particleCount = inZone ? 24 : 16;
+            for (let i = 0; i < particleCount; i++) {
+              const angle = (Math.PI * 2 / particleCount) * i;
               gs.celebrationParticles.push({
                 x: gs.dog.x,
                 y: gs.dog.y - 25,
-                vx: Math.cos(angle) * (3 + Math.random() * 4),
-                vy: Math.sin(angle) * (3 + Math.random() * 4) - 2,
+                vx: Math.cos(angle) * (3.5 + Math.random() * 4.5),
+                vy: Math.sin(angle) * (3.5 + Math.random() * 4.5) - 2.5,
                 color: ['#ffbe0b', '#ff006e', '#00f5d4', '#ccff00'][i % 4],
                 life: 1.0,
               });
             }
 
-            onAddPoints(50);
-            setScore((s) => s + 50);
+            onAddPoints(pointsEarned);
+            setScore((s) => s + pointsEarned);
 
             // Cheerful catch bubble
-            const catchQuotes = ['Pawsome catch! 🎾', 'Got it! 🐾', 'Good boy! ✨', 'Super dog! 🦴'];
-            setBarkBubble(catchQuotes[Math.floor(Math.random() * catchQuotes.length)]);
-            setTimeout(() => setBarkBubble(null), 1400);
+            if (inZone) {
+              const zoneQuotes = [
+                '🎯 CATCH ZONE BONUS! +100 ✨',
+                '🎯 BULLSEYE CATCH! +100 🐾',
+                '🎯 PERFECT TIMING! +100 ⭐',
+                '🎯 IN THE ZONE! +100 🐶'
+              ];
+              setBarkBubble(zoneQuotes[Math.floor(Math.random() * zoneQuotes.length)]);
+            } else {
+              const catchQuotes = ['Pawsome catch! 🎾', 'Got it! 🐾', 'Good boy! ✨', 'Super dog! 🦴'];
+              setBarkBubble(catchQuotes[Math.floor(Math.random() * catchQuotes.length)]);
+            }
+            setTimeout(() => setBarkBubble(null), 1500);
 
             setCatches((prev) => {
               const next = prev + 1;
