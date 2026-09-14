@@ -122,8 +122,12 @@ export default function PinGameCanvas({
     const newX = Math.max(minX, Math.min(maxX, b.x + delta));
     b.x = newX;
     setCurrentBowlX(newX);
-    if (bowlBodyRef.current) {
-      Matter.Body.setPosition(bowlBodyRef.current, { x: newX, y: b.y });
+    const bb = bowlBodyRef.current;
+    if (bb) {
+      if (bb.sensor) Matter.Body.setPosition(bb.sensor, { x: newX, y: b.y - 4 });
+      if (bb.bottom) Matter.Body.setPosition(bb.bottom, { x: newX, y: b.y + b.h / 2 - 2 });
+      if (bb.left) Matter.Body.setPosition(bb.left, { x: newX - b.w / 2 + 4, y: b.y - 4 });
+      if (bb.right) Matter.Body.setPosition(bb.right, { x: newX + b.w / 2 - 4, y: b.y - 4 });
     }
   };
 
@@ -165,12 +169,12 @@ export default function PinGameCanvas({
     wallBodies.push(floor, leftWall, rightWall);
     World.add(world, wallBodies);
 
-    // 2. Create Dog Food Bowl Sensor (Movable!)
+    // 2. Create Dog Food Bowl with Solid Basin & Collection Sensor (Movable!)
     const initialBowlPos = bowlPosRef.current;
-    const bowl = Bodies.rectangle(
+    const bowlSensor = Bodies.rectangle(
       initialBowlPos.x,
-      initialBowlPos.y,
-      initialBowlPos.w,
+      initialBowlPos.y - 4,
+      initialBowlPos.w - 12,
       initialBowlPos.h,
       {
         isStatic: true,
@@ -178,8 +182,48 @@ export default function PinGameCanvas({
         label: 'bowlSensor',
       }
     );
-    bowlBodyRef.current = bowl;
-    World.add(world, bowl);
+    const bowlBottom = Bodies.rectangle(
+      initialBowlPos.x,
+      initialBowlPos.y + initialBowlPos.h / 2 - 2,
+      initialBowlPos.w - 4,
+      10,
+      {
+        isStatic: true,
+        label: 'bowlBottom',
+        friction: 0.9,
+        restitution: 0.1,
+      }
+    );
+    const bowlLeftWall = Bodies.rectangle(
+      initialBowlPos.x - initialBowlPos.w / 2 + 4,
+      initialBowlPos.y - 4,
+      8,
+      initialBowlPos.h + 6,
+      {
+        isStatic: true,
+        label: 'bowlWall',
+        friction: 0.5,
+      }
+    );
+    const bowlRightWall = Bodies.rectangle(
+      initialBowlPos.x + initialBowlPos.w / 2 - 4,
+      initialBowlPos.y - 4,
+      8,
+      initialBowlPos.h + 6,
+      {
+        isStatic: true,
+        label: 'bowlWall',
+        friction: 0.5,
+      }
+    );
+
+    bowlBodyRef.current = {
+      sensor: bowlSensor,
+      bottom: bowlBottom,
+      left: bowlLeftWall,
+      right: bowlRightWall,
+    };
+    World.add(world, [bowlSensor, bowlBottom, bowlLeftWall, bowlRightWall]);
 
     // 3. Create Pins
     const pinObjects = levelData.pins.map((p) => {
@@ -256,7 +300,8 @@ export default function PinGameCanvas({
       event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
         const checkBody = (target, other) => {
-          if (target.label === 'bowlSensor' && !handledBodies.has(other.id)) {
+          if ((target.label === 'bowlSensor' || target.label === 'bowlBottom') && !handledBodies.has(other.id)) {
+            const curB = bowlPosRef.current;
             if (other.label === 'kibble') {
               handledBodies.add(other.id);
               collectedKibbles++;
@@ -264,8 +309,12 @@ export default function PinGameCanvas({
               AudioFX.playKibbleDrop();
               onAddPoints(10);
               spawnFloatingText('+10', other.position.x, other.position.y - 10);
-              // Fade out / remove kibble from physics
-              setTimeout(() => World.remove(world, other), 100);
+              // Secure kibble inside the bowl so it never falls under
+              Body.setVelocity(other, { x: 0, y: 0 });
+              Body.setStatic(other, true);
+              other.inBowl = true;
+              other.bowlOffsetX = other.position.x - curB.x;
+              other.bowlOffsetY = Math.min(curB.h / 2 - 6, other.position.y - curB.y);
             } else if (other.label === 'treat') {
               handledBodies.add(other.id);
               collectedTreats++;
@@ -273,7 +322,11 @@ export default function PinGameCanvas({
               AudioFX.playTreatBonus();
               onAddPoints(100);
               spawnFloatingText('⭐ +100 TREAT!', other.position.x, other.position.y - 15);
-              setTimeout(() => World.remove(world, other), 100);
+              Body.setVelocity(other, { x: 0, y: 0 });
+              Body.setStatic(other, true);
+              other.inBowl = true;
+              other.bowlOffsetX = other.position.x - curB.x;
+              other.bowlOffsetY = Math.min(curB.h / 2 - 6, other.position.y - curB.y);
             } else if (other.label === 'mud') {
               // Mud hit the bowl! Level failed!
               setLevelState('failed');
@@ -405,8 +458,12 @@ export default function PinGameCanvas({
         const newX = Math.max(minX, Math.min(maxX, dragStartBowlX + deltaX));
         b.x = newX;
         setCurrentBowlX(newX);
-        if (bowlBodyRef.current) {
-          Body.setPosition(bowlBodyRef.current, { x: newX, y: b.y });
+        const bb = bowlBodyRef.current;
+        if (bb) {
+          if (bb.sensor) Body.setPosition(bb.sensor, { x: newX, y: b.y - 4 });
+          if (bb.bottom) Body.setPosition(bb.bottom, { x: newX, y: b.y + b.h / 2 - 2 });
+          if (bb.left) Body.setPosition(bb.left, { x: newX - b.w / 2 + 4, y: b.y - 4 });
+          if (bb.right) Body.setPosition(bb.right, { x: newX + b.w / 2 - 4, y: b.y - 4 });
         }
         canvas.style.cursor = 'ew-resize';
         return;
@@ -520,6 +577,58 @@ export default function PinGameCanvas({
     let animId;
     const render = () => {
       Matter.Engine.update(engine, 1000 / 60);
+
+      // Active bowl mouth interceptor & carried item position synchronization
+      const curB = bowlPosRef.current;
+      kibbleBodies.forEach((k) => {
+        if (!handledBodies.has(k.id)) {
+          const inH = Math.abs(k.position.x - curB.x) <= curB.w / 2 + 4;
+          const inV = k.position.y >= curB.y - curB.h / 2 - 6 && k.position.y <= curB.y + curB.h / 2 + 8;
+          if (inH && inV) {
+            handledBodies.add(k.id);
+            collectedKibbles++;
+            setKibbleInBowl(collectedKibbles);
+            AudioFX.playKibbleDrop();
+            onAddPoints(10);
+            spawnFloatingText('+10', k.position.x, k.position.y - 10);
+            Body.setVelocity(k, { x: 0, y: 0 });
+            Body.setStatic(k, true);
+            k.inBowl = true;
+            k.bowlOffsetX = k.position.x - curB.x;
+            k.bowlOffsetY = Math.min(curB.h / 2 - 6, k.position.y - curB.y);
+          }
+        } else if (k.inBowl) {
+          Body.setPosition(k, {
+            x: curB.x + (k.bowlOffsetX || 0),
+            y: curB.y + (k.bowlOffsetY || 2),
+          });
+        }
+      });
+
+      treatBodies.forEach((t) => {
+        if (!handledBodies.has(t.id)) {
+          const inH = Math.abs(t.position.x - curB.x) <= curB.w / 2 + 8;
+          const inV = t.position.y >= curB.y - curB.h / 2 - 6 && t.position.y <= curB.y + curB.h / 2 + 8;
+          if (inH && inV) {
+            handledBodies.add(t.id);
+            collectedTreats++;
+            setTreatsInBowl(collectedTreats);
+            AudioFX.playTreatBonus();
+            onAddPoints(100);
+            spawnFloatingText('⭐ +100 TREAT!', t.position.x, t.position.y - 15);
+            Body.setVelocity(t, { x: 0, y: 0 });
+            Body.setStatic(t, true);
+            t.inBowl = true;
+            t.bowlOffsetX = t.position.x - curB.x;
+            t.bowlOffsetY = Math.min(curB.h / 2 - 6, t.position.y - curB.y);
+          }
+        } else if (t.inBowl) {
+          Body.setPosition(t, {
+            x: curB.x + (t.bowlOffsetX || 0),
+            y: curB.y + (t.bowlOffsetY || 2),
+          });
+        }
+      });
 
       // Advance sliding pins frame-by-frame with synchronous physics updates
       pinObjects.forEach((pinBody) => {

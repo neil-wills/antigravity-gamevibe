@@ -423,9 +423,10 @@ export default function FetchGame({
       trail: [],
     },
     dog: {
-      x: 70,
+      x: 140,
       y: 380,
       vx: 0,
+      vy: 0,
       state: 'idle',
       facing: 1,
       holdingItem: false,
@@ -450,7 +451,8 @@ export default function FetchGame({
   });
 
   const [dogDisplay, setDogDisplay] = useState({
-    x: 70,
+    x: 140,
+    y: 380,
     state: 'idle',
     flip: false,
     hasBall: false,
@@ -526,11 +528,14 @@ export default function FetchGame({
       active: false,
       inAir: false,
       trail: [],
+      flightTicks: 0,
+      bounces: 0,
     };
     gameState.current.dog = {
-      x: 70,
+      x: 140,
       y: 380,
       vx: 0,
+      vy: 0,
       state: 'idle',
       facing: 1,
       holdingItem: false,
@@ -576,6 +581,8 @@ export default function FetchGame({
     gs.ball.rot = 0;
     gs.ball.spinRot = 0;
     gs.ball.trail = [];
+    gs.ball.flightTicks = 0;
+    gs.ball.bounces = 0;
 
     AudioFX.playThrow();
     gs.dog.state = 'walking';
@@ -686,6 +693,8 @@ export default function FetchGame({
         gs.ball.rot = 0;
         gs.ball.spinRot = 0;
         gs.ball.trail = [];
+        gs.ball.flightTicks = 0;
+        gs.ball.bounces = 0;
 
         AudioFX.playThrow();
         gs.dog.state = 'walking';
@@ -898,11 +907,12 @@ export default function FetchGame({
 
       // 6. Item State 2: In Flight
       if (gs.ball.active) {
-        const gravity = itemType === 'ball' ? 0.32 : 0.14; // Frisbee glides gracefully!
+        const gravity = itemType === 'ball' ? 0.35 : 0.16; // Frisbee glides gracefully!
+        gs.ball.flightTicks = (gs.ball.flightTicks || 0) + 1;
         gs.ball.x += gs.ball.vx;
         gs.ball.y += gs.ball.vy;
         gs.ball.vy += gravity;
-        gs.ball.vx *= 0.996;
+        gs.ball.vx *= 0.997;
         gs.ball.rot += gs.ball.vx * 0.07;
         gs.ball.spinRot += 0.25;
 
@@ -910,20 +920,44 @@ export default function FetchGame({
         gs.ball.trail.push({ x: gs.ball.x, y: gs.ball.y });
         if (gs.ball.trail.length > 7) gs.ball.trail.shift();
 
-        // Bounce on ground
-        if (gs.ball.y >= gs.groundY - 14) {
-          gs.ball.y = gs.groundY - 14;
-          gs.ball.vy = -gs.ball.vy * 0.52;
-          gs.ball.vx *= 0.8;
-          if (Math.abs(gs.ball.vy) < 1.0) {
-            gs.ball.inAir = false;
+        const ballRadius = itemType === 'ball' ? 16 : 24;
+
+        // 1. Energetic Ground Bounce
+        if (gs.ball.y >= gs.groundY - ballRadius) {
+          gs.ball.y = gs.groundY - ballRadius;
+          const bounceFactor = itemType === 'ball' ? 0.84 : 0.72;
+          gs.ball.vy = -Math.abs(gs.ball.vy) * bounceFactor;
+          // Maintain lively bounce height
+          if (Math.abs(gs.ball.vy) < 4.0 && (gs.ball.bounces || 0) < 6) {
+            gs.ball.vy = itemType === 'ball' ? -6.5 : -4.8;
           }
+          gs.ball.vx *= 0.95;
+          gs.ball.bounces = (gs.ball.bounces || 0) + 1;
+          AudioFX.playBounce();
         }
 
-        // Right edge bound
-        if (gs.ball.x > width - 24) {
-          gs.ball.x = width - 24;
-          gs.ball.vx = -gs.ball.vx * 0.5;
+        // 2. Ceiling Bounce
+        if (gs.ball.y <= ballRadius + 12) {
+          gs.ball.y = ballRadius + 12;
+          gs.ball.vy = Math.abs(gs.ball.vy) * 0.86;
+          gs.ball.bounces = (gs.ball.bounces || 0) + 1;
+          AudioFX.playBounce();
+        }
+
+        // 3. Right Wall Bounce
+        if (gs.ball.x >= width - ballRadius - 8) {
+          gs.ball.x = width - ballRadius - 8;
+          gs.ball.vx = -Math.abs(gs.ball.vx) * 0.88;
+          gs.ball.bounces = (gs.ball.bounces || 0) + 1;
+          AudioFX.playBounce();
+        }
+
+        // 4. Left Wall Bounce
+        if (gs.ball.x <= ballRadius + 8) {
+          gs.ball.x = ballRadius + 8;
+          gs.ball.vx = Math.abs(gs.ball.vx) * 0.88;
+          gs.ball.bounces = (gs.ball.bounces || 0) + 1;
+          AudioFX.playBounce();
         }
 
         // Draw Dynamic Ground Shadow
@@ -956,25 +990,43 @@ export default function FetchGame({
           drawFrisbee(ctx, gs.ball.x, gs.ball.y, 48, 18, tilt, gs.ball.spinRot);
         }
 
-        // 7. Anticipatory Smart Dog AI (Fetch pursuit when NOT distracted by critter)
-        const dogSpeed = 8.5; // Fast enough to easily intercept!
+        // 7. Eager Running & Leaping Dog AI (Dog chases the bouncing ball across the field!)
+        const dogSpeed = 9.4; // Energetic sprint to track bouncing ball
         if (!gs.dog.holdingItem && !gs.critter) {
-          // Dog runs towards the ball
-          if (gs.dog.x < gs.ball.x - 10) {
-            gs.dog.x += dogSpeed;
-            gs.dog.facing = 1;
-            onAddSteps(1);
-          } else if (gs.dog.x > gs.ball.x + 10) {
-            gs.dog.x -= dogSpeed;
-            gs.dog.facing = -1;
-            onAddSteps(1);
+          const dx = gs.ball.x - gs.dog.x;
+
+          // Dog runs towards the bouncing ball
+          if (Math.abs(dx) > 10) {
+            gs.dog.x += Math.sign(dx) * Math.min(Math.abs(dx), dogSpeed);
+            gs.dog.facing = dx > 0 ? 1 : -1;
+            gs.dog.state = 'walking';
+            if (gs.tick % 6 === 0) onAddSteps(1);
+          } else {
+            gs.dog.state = 'idle';
           }
 
-          // Generous Catch Hitbox (Super easy & fun!)
-          const dist = Math.hypot(gs.dog.x - gs.ball.x, gs.dog.y - 25 - gs.ball.y);
-          const isGroundedNear = gs.ball.y >= gs.groundY - 24 && Math.abs(gs.dog.x - gs.ball.x) < 85;
+          // Dog vertical physics (running on ground & jumping to snatch bouncing ball!)
+          gs.dog.y = (gs.dog.y || 380) + (gs.dog.vy || 0);
+          if (gs.dog.y < 380) {
+            gs.dog.vy = (gs.dog.vy || 0) + 0.68; // gravity
+          } else {
+            gs.dog.y = 380;
+            gs.dog.vy = 0;
+          }
 
-          if (dist < 70 || isGroundedNear) {
+          // If close horizontally and ball is bouncing high in the air, dog leaps up!
+          if (Math.abs(dx) < 55 && gs.ball.y < gs.groundY - 55 && gs.dog.y >= 375 && gs.ball.flightTicks > 15) {
+            gs.dog.vy = -10.5;
+            AudioFX.playBark(1.2);
+          }
+
+          // Catch condition: MUST have flown/bounced (prevents instant catch at launcher!)
+          const hasFlownEnough = (gs.ball.flightTicks || 0) > 18 || (gs.ball.bounces || 0) >= 1 || Math.abs(gs.ball.x - LAUNCH_X) > 75;
+
+          const dist = Math.hypot(gs.dog.x - gs.ball.x, (gs.dog.y - 25) - gs.ball.y);
+          const isGroundedNear = gs.ball.y >= gs.groundY - 26 && Math.abs(gs.dog.x - gs.ball.x) < 42;
+
+          if (hasFlownEnough && (dist < 46 || isGroundedNear)) {
             // CAUGHT!
             gs.dog.holdingItem = true;
             gs.ball.active = false;
@@ -1175,6 +1227,7 @@ export default function FetchGame({
       // Update React state for DogRenderer
       setDogDisplay({
         x: gs.dog.x,
+        y: gs.dog.y || 380,
         state: gameWon ? 'eating' : gs.dog.state,
         flip: gs.dog.facing === -1,
         hasBall: gs.dog.holdingItem,
@@ -1254,7 +1307,7 @@ export default function FetchGame({
           style={{
             position: 'absolute',
             left: dogDisplay.x - 70,
-            top: 310,
+            top: (dogDisplay.y || 380) - 70,
             zIndex: 15,
           }}
           title="Click to pet & hear your pup bark! 🐶"

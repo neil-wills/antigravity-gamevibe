@@ -322,6 +322,30 @@ class SoundController {
     osc.stop(t + 0.22);
   }
 
+  // Playful rubber ball bounce sound
+  playBounce() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, t);
+    osc.frequency.exponentialRampToValueAtTime(110, t + 0.09);
+
+    gain.gain.setValueAtTime(0.24, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.11);
+  }
+
   // Catch sound
   playCatch() {
     if (this.muted) return;
