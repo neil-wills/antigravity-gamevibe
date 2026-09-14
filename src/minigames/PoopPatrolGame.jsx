@@ -300,7 +300,7 @@ export default function PoopPatrolGame({
   const [dogPos, setDogPos] = useState({ x: 535, y: 410, state: 'idle', flip: true });
 
   const critterState = useRef({
-    critter: null,
+    critters: [],
     timer: 180, // ~3s before first spontaneous critter distraction
   });
 
@@ -313,33 +313,30 @@ export default function PoopPatrolGame({
   };
 
   // On-demand or automatic critter spawner for the garden
+  // Each selection creates a new scampering animal on screen!
   const spawnCritter = (preferredType = null) => {
     const cs = critterState.current;
     if (gameWon) return;
-
-    if (cs.critter) {
-      cs.critter.vx *= 1.35;
-      AudioFX.playCritterSqueak();
-      AudioFX.playBreedBark(selectedBreed);
-      return;
-    }
 
     const type = preferredType || (Math.random() < 0.5 ? 'squirrel' : 'bunny');
     const fromLeft = Math.random() < 0.5;
     const x = fromLeft ? -35 : 635;
     const y = Math.random() * 220 + 90;
-    const vx = fromLeft ? 3.6 : -3.6;
+    const speed = 3.2 + Math.random() * 1.4;
+    const vx = fromLeft ? speed : -speed;
     const facing = fromLeft ? 1 : -1;
 
-    cs.critter = {
+    cs.critters.push({
+      id: Date.now() + Math.random(),
       type,
       x,
       y,
       vx,
       facing,
-      phase: 0,
-      jumped: false,
-    };
+      phase: Math.random() * Math.PI,
+      mowerFright: false,
+      dogBonus: false,
+    });
 
     AudioFX.playBreedBark(selectedBreed);
     AudioFX.playCritterSqueak();
@@ -389,7 +386,7 @@ export default function PoopPatrolGame({
     setGrassMowedPct(0);
     setGameWon(false);
     mowerState.current.target = null;
-    critterState.current.critter = null;
+    critterState.current.critters = [];
     critterState.current.timer = 180;
     setDogPos({ x: 535, y: 410, state: 'idle', flip: true });
     setGameResetCount((c) => c + 1);
@@ -481,21 +478,24 @@ export default function PoopPatrolGame({
         const clickX = (e.clientX - rect.left) * (width / rect.width);
         const clickY = (e.clientY - rect.top) * (height / rect.height);
 
-        // Check if clicked directly on the critter!
+        // Check if clicked directly on any critter!
         const cs = critterState.current;
-        if (cs.critter) {
-          const cDist = Math.hypot(clickX - cs.critter.x, clickY - cs.critter.y);
-          if (cDist < 42) {
-            AudioFX.playCritterSqueak();
-            AudioFX.playTreatBonus();
-            onAddPoints(50);
-            setScore((s) => s + 50);
-            setBarkBubble(
-              cs.critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
-            );
-            setTimeout(() => setBarkBubble(null), 1400);
-            cs.critter.vx *= 1.6;
-            return;
+        if (cs.critters.length > 0) {
+          for (let i = cs.critters.length - 1; i >= 0; i--) {
+            const critter = cs.critters[i];
+            const cDist = Math.hypot(clickX - critter.x, clickY - critter.y);
+            if (cDist < 42) {
+              AudioFX.playCritterSqueak();
+              AudioFX.playTreatBonus();
+              onAddPoints(50);
+              setScore((s) => s + 50);
+              setBarkBubble(
+                critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
+              );
+              setTimeout(() => setBarkBubble(null), 1400);
+              critter.vx *= 1.6;
+              return;
+            }
           }
         }
 
@@ -793,9 +793,9 @@ export default function PoopPatrolGame({
 
         ctx.restore();
 
-        // Scampering Critter (Bunny or Squirrel) in Garden
+        // Scampering Critters (Bunny or Squirrel) in Garden
         const cs = critterState.current;
-        if (!cs.critter && !gameWon) {
+        if (cs.critters.length === 0 && !gameWon) {
           cs.timer--;
           if (cs.timer <= 0) {
             spawnCritter();
@@ -803,41 +803,58 @@ export default function PoopPatrolGame({
           }
         }
 
-        if (cs.critter) {
-          cs.critter.x += cs.critter.vx;
-          cs.critter.phase += 0.22;
+        if (cs.critters.length > 0) {
+          let closestCritter = null;
+          let minDogDist = Infinity;
 
-          if (cs.critter.type === 'bunny') {
-            drawCartoonBunny(ctx, cs.critter.x, cs.critter.y, cs.critter.facing, cs.critter.phase, 0.85);
-          } else {
-            drawCartoonSquirrel(ctx, cs.critter.x, cs.critter.y, cs.critter.facing, cs.critter.phase, 0.85);
+          for (let i = cs.critters.length - 1; i >= 0; i--) {
+            const critter = cs.critters[i];
+            critter.x += critter.vx;
+            critter.phase += 0.22;
+
+            if (critter.type === 'bunny') {
+              drawCartoonBunny(ctx, critter.x, critter.y, critter.facing, critter.phase, 0.85);
+            } else {
+              drawCartoonSquirrel(ctx, critter.x, critter.y, critter.facing, critter.phase, 0.85);
+            }
+
+            // Lawnmower proximity reaction (critter startled hop)
+            const mDist = Math.hypot(ms.x - critter.x, ms.y - critter.y);
+            if (mDist < 60 && !critter.mowerFright) {
+              critter.mowerFright = true;
+              critter.vx *= 1.4;
+              AudioFX.playCritterSqueak();
+            }
+
+            // Track closest critter to dog
+            const dDist = Math.hypot(dogPos.x - critter.x, dogPos.y - critter.y);
+            if (dDist < minDogDist) {
+              minDogDist = dDist;
+              closestCritter = critter;
+            }
+
+            // Dog close bonus
+            if (dDist < 50 && !critter.dogBonus) {
+              critter.dogBonus = true;
+              critter.vx *= 1.35;
+              AudioFX.playTreatBonus();
+              onAddPoints(25);
+              setScore((s) => s + 25);
+              setBarkBubble('Almost got it! 🐶✨');
+              setTimeout(() => setBarkBubble(null), 1200);
+            }
+
+            // Off-screen check
+            if (critter.x < -60 || critter.x > width + 60) {
+              cs.critters.splice(i, 1);
+            }
           }
 
-          // Lawnmower proximity reaction (critter startled hop)
-          const mDist = Math.hypot(ms.x - cs.critter.x, ms.y - cs.critter.y);
-          if (mDist < 60 && !cs.critter.mowerFright) {
-            cs.critter.mowerFright = true;
-            cs.critter.vx *= 1.4;
-            AudioFX.playCritterSqueak();
-          }
-
-          // Dog spectator runs out across the garden to playfully chase the animal!
-          if (!gameWon) {
+          // Dog spectator runs out across the garden to playfully chase the closest animal!
+          if (!gameWon && closestCritter) {
             setDogPos((prev) => {
-              const dx = cs.critter.x - prev.x;
-              const dy = cs.critter.y - prev.y;
-              const dist = Math.hypot(dx, dy);
-
-              if (dist < 50 && !cs.critter.dogBonus) {
-                cs.critter.dogBonus = true;
-                cs.critter.vx *= 1.35;
-                AudioFX.playTreatBonus();
-                onAddPoints(25);
-                setScore((s) => s + 25);
-                setBarkBubble('Almost got it! 🐶✨');
-                setTimeout(() => setBarkBubble(null), 1200);
-              }
-
+              const dx = closestCritter.x - prev.x;
+              const dy = closestCritter.y - prev.y;
               const spd = 4.8;
               return {
                 x: prev.x + (Math.abs(dx) > 12 ? Math.sign(dx) * spd : 0),
@@ -848,9 +865,7 @@ export default function PoopPatrolGame({
             });
           }
 
-          // Off-screen check
-          if (cs.critter.x < -60 || cs.critter.x > width + 60) {
-            cs.critter = null;
+          if (cs.critters.length === 0) {
             cs.timer = 800 + Math.floor(Math.random() * 400);
             setDogPos({ x: 535, y: 410, state: 'idle', flip: true });
           }
@@ -903,21 +918,24 @@ export default function PoopPatrolGame({
         const clickX = (e.clientX - rect.left) * (width / rect.width);
         const clickY = (e.clientY - rect.top) * (height / rect.height);
 
-        // Check if clicked directly on the critter!
+        // Check if clicked directly on any critter!
         const cs = critterState.current;
-        if (cs.critter) {
-          const cDist = Math.hypot(clickX - cs.critter.x, clickY - cs.critter.y);
-          if (cDist < 42) {
-            AudioFX.playCritterSqueak();
-            AudioFX.playTreatBonus();
-            onAddPoints(50);
-            setScore((s) => s + 50);
-            setBarkBubble(
-              cs.critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
-            );
-            setTimeout(() => setBarkBubble(null), 1400);
-            cs.critter.vx *= 1.6;
-            return;
+        if (cs.critters.length > 0) {
+          for (let i = cs.critters.length - 1; i >= 0; i--) {
+            const critter = cs.critters[i];
+            const cDist = Math.hypot(clickX - critter.x, clickY - critter.y);
+            if (cDist < 42) {
+              AudioFX.playCritterSqueak();
+              AudioFX.playTreatBonus();
+              onAddPoints(50);
+              setScore((s) => s + 50);
+              setBarkBubble(
+                critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
+              );
+              setTimeout(() => setBarkBubble(null), 1400);
+              critter.vx *= 1.6;
+              return;
+            }
           }
         }
 
@@ -1197,9 +1215,9 @@ export default function PoopPatrolGame({
           }
         }
 
-        // 9. Scampering Critter (Bunny or Squirrel) in Garden
+        // 9. Scampering Critters (Bunny or Squirrel) in Garden
         const cs = critterState.current;
-        if (!cs.critter && !gameWon) {
+        if (cs.critters.length === 0 && !gameWon) {
           cs.timer--;
           if (cs.timer <= 0) {
             spawnCritter();
@@ -1207,33 +1225,50 @@ export default function PoopPatrolGame({
           }
         }
 
-        if (cs.critter) {
-          cs.critter.x += cs.critter.vx;
-          cs.critter.phase += 0.22;
+        if (cs.critters.length > 0) {
+          let closestCritter = null;
+          let minDogDist = Infinity;
 
-          if (cs.critter.type === 'bunny') {
-            drawCartoonBunny(ctx, cs.critter.x, cs.critter.y, cs.critter.facing, cs.critter.phase, 0.85);
-          } else {
-            drawCartoonSquirrel(ctx, cs.critter.x, cs.critter.y, cs.critter.facing, cs.critter.phase, 0.85);
+          for (let i = cs.critters.length - 1; i >= 0; i--) {
+            const critter = cs.critters[i];
+            critter.x += critter.vx;
+            critter.phase += 0.22;
+
+            if (critter.type === 'bunny') {
+              drawCartoonBunny(ctx, critter.x, critter.y, critter.facing, critter.phase, 0.85);
+            } else {
+              drawCartoonSquirrel(ctx, critter.x, critter.y, critter.facing, critter.phase, 0.85);
+            }
+
+            // Track closest critter to dog
+            const dDist = Math.hypot(dogPos.x - critter.x, dogPos.y - critter.y);
+            if (dDist < minDogDist) {
+              minDogDist = dDist;
+              closestCritter = critter;
+            }
+
+            // Dog close bonus
+            if (dDist < 50 && !critter.dogBonus) {
+              critter.dogBonus = true;
+              critter.vx *= 1.35;
+              AudioFX.playTreatBonus();
+              onAddPoints(25);
+              setScore((s) => s + 25);
+              setBarkBubble('Almost got it! 🐶✨');
+              setTimeout(() => setBarkBubble(null), 1200);
+            }
+
+            // Off-screen check
+            if (critter.x < -60 || critter.x > width + 60) {
+              cs.critters.splice(i, 1);
+            }
           }
 
-          // Dog spectator runs out across the garden to playfully chase the animal!
-          if (!gameWon) {
+          // Dog spectator runs out across the garden to playfully chase the closest animal!
+          if (!gameWon && closestCritter) {
             setDogPos((prev) => {
-              const dx = cs.critter.x - prev.x;
-              const dy = cs.critter.y - prev.y;
-              const dist = Math.hypot(dx, dy);
-
-              if (dist < 50 && !cs.critter.dogBonus) {
-                cs.critter.dogBonus = true;
-                cs.critter.vx *= 1.35;
-                AudioFX.playTreatBonus();
-                onAddPoints(25);
-                setScore((s) => s + 25);
-                setBarkBubble('Almost got it! 🐶✨');
-                setTimeout(() => setBarkBubble(null), 1200);
-              }
-
+              const dx = closestCritter.x - prev.x;
+              const dy = closestCritter.y - prev.y;
               const spd = 4.8;
               return {
                 x: prev.x + (Math.abs(dx) > 12 ? Math.sign(dx) * spd : 0),
@@ -1244,9 +1279,8 @@ export default function PoopPatrolGame({
             });
           }
 
-          // Off-screen check
-          if (cs.critter.x < -60 || cs.critter.x > width + 60) {
-            cs.critter = null;
+          // Return dog home when all critters exit
+          if (cs.critters.length === 0) {
             cs.timer = 800 + Math.floor(Math.random() * 400);
             setDogPos({ x: 535, y: 410, state: 'idle', flip: true });
           }

@@ -556,7 +556,7 @@ export default function FetchGame({
       aimVx: 7.0,
       aimVy: -9.0,
     },
-    critter: null, // { type: 'bunny' | 'squirrel', x, y, vx, facing, phase, jumped }
+    critters: [], // [{ id, type: 'bunny' | 'squirrel', x, y, vx, facing, phase, jumped }]
     critterCooldown: 180, // ~3s before first distraction
     critterParticles: [], // running dust puffs
     groundY: GROUND_Y,
@@ -585,33 +585,30 @@ export default function FetchGame({
   };
 
   // On-demand or automatic critter spawner (Bunny or Squirrel)
+  // Each selection creates a new scampering animal on screen!
   const spawnCritter = (preferredType = null) => {
     const gs = gameState.current;
     if (gameWon) return;
 
-    if (gs.critter) {
-      // If already on screen, give a speed boost & playful chirp!
-      gs.critter.vx *= 1.35;
-      AudioFX.playCritterSqueak();
-      AudioFX.playBreedBark(selectedBreed);
-      return;
-    }
-
     const type = preferredType || (Math.random() < 0.5 ? 'squirrel' : 'bunny');
     const fromLeft = Math.random() < 0.5;
     const x = fromLeft ? -35 : gs.width + 35;
-    const vx = fromLeft ? 4.2 : -4.2;
+    // Vary speed and vertical offset so multiple animals scatter and scamper naturally
+    const speed = 3.6 + Math.random() * 1.6;
+    const vx = fromLeft ? speed : -speed;
     const facing = fromLeft ? 1 : -1;
+    const yOffset = ((gs.critters.length * 7) % 21) - 10;
 
-    gs.critter = {
+    gs.critters.push({
+      id: Date.now() + Math.random(),
       type,
       x,
-      y: gs.groundY - 14,
+      y: gs.groundY - 14 + yOffset,
       vx,
       facing,
-      phase: 0,
+      phase: Math.random() * Math.PI,
       jumped: false,
-    };
+    });
 
     AudioFX.playBreedBark(selectedBreed);
     AudioFX.playCritterSqueak();
@@ -657,7 +654,7 @@ export default function FetchGame({
       facing: 1,
       holdingItem: false,
     };
-    gameState.current.critter = null;
+    gameState.current.critters = [];
     gameState.current.critterCooldown = 180;
     gameState.current.critterParticles = [];
     gameState.current.celebrationParticles = [];
@@ -727,31 +724,34 @@ export default function FetchGame({
       const clickX = (e.clientX - rect.left) * (width / rect.width);
       const clickY = (e.clientY - rect.top) * (height / rect.height);
 
-      // Check if clicked directly on the critter!
-      if (gs.critter) {
-        const distToCritter = Math.hypot(clickX - gs.critter.x, clickY - (gs.critter.y - 6));
-        if (distToCritter < 45) {
-          AudioFX.playCritterSqueak();
-          AudioFX.playTreatBonus();
-          for (let i = 0; i < 16; i++) {
-            const angle = (Math.PI * 2 / 16) * i;
-            gs.celebrationParticles.push({
-              x: gs.critter.x,
-              y: gs.critter.y - 12,
-              vx: Math.cos(angle) * (3.5 + Math.random() * 4),
-              vy: Math.sin(angle) * (3.5 + Math.random() * 4) - 2,
-              color: ['#ffbe0b', '#ec4899', '#00f5d4', '#a855f7'][i % 4],
-              life: 1.0,
-            });
+      // Check if clicked directly on any critter!
+      if (gs.critters.length > 0) {
+        for (let i = gs.critters.length - 1; i >= 0; i--) {
+          const critter = gs.critters[i];
+          const distToCritter = Math.hypot(clickX - critter.x, clickY - (critter.y - 6));
+          if (distToCritter < 45) {
+            AudioFX.playCritterSqueak();
+            AudioFX.playTreatBonus();
+            for (let j = 0; j < 16; j++) {
+              const angle = (Math.PI * 2 / 16) * j;
+              gs.celebrationParticles.push({
+                x: critter.x,
+                y: critter.y - 12,
+                vx: Math.cos(angle) * (3.5 + Math.random() * 4),
+                vy: Math.sin(angle) * (3.5 + Math.random() * 4) - 2,
+                color: ['#ffbe0b', '#ec4899', '#00f5d4', '#a855f7'][j % 4],
+                life: 1.0,
+              });
+            }
+            onAddPoints(50);
+            setScore((s) => s + 50);
+            setBarkBubble(
+              critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
+            );
+            setTimeout(() => setBarkBubble(null), 1400);
+            critter.vx *= 1.6; // playful scamper escape dash!
+            return;
           }
-          onAddPoints(50);
-          setScore((s) => s + 50);
-          setBarkBubble(
-            gs.critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
-          );
-          setTimeout(() => setBarkBubble(null), 1400);
-          gs.critter.vx *= 1.6; // playful scamper escape dash!
-          return;
         }
       }
 
@@ -831,7 +831,7 @@ export default function FetchGame({
       gs.tick++;
 
       // Automatic random bunny / squirrel distraction spawner
-      if (!gs.critter && !gameWon) {
+      if (gs.critters.length === 0 && !gameWon) {
         gs.critterCooldown--;
         if (gs.critterCooldown <= 0) {
           spawnCritter();
@@ -1143,7 +1143,7 @@ export default function FetchGame({
         }
 
         // 7. Eager Running & Leaping Dog AI (Dog chases after the ball across the field!)
-        if (!gs.dog.holdingItem && !gs.critter) {
+        if (!gs.dog.holdingItem && gs.critters.length === 0) {
           // Dog runs in active pursuit after the flying/bouncing ball!
           gs.dog.state = 'walking';
 
@@ -1262,7 +1262,7 @@ export default function FetchGame({
 
       // 8. Item State 3: Held in Dog's Mouth While Trotting Back!
       if (gs.dog.holdingItem) {
-        if (!gs.critter) {
+        if (gs.critters.length === 0) {
           const returnTargetX = 105;
           if (gs.dog.x > returnTargetX) {
             gs.dog.x -= 4.8;
@@ -1294,62 +1294,59 @@ export default function FetchGame({
       }
 
       // 9. Scampering Cartoon Bunny or Squirrel & Dog Distraction Chase!
-      if (gs.critter) {
-        // Move critter across the lawn
-        gs.critter.x += gs.critter.vx;
-        gs.critter.phase += 0.24;
+      if (gs.critters.length > 0) {
+        let closestCritter = null;
+        let minCritterDist = Infinity;
 
-        // Ground dust puffs as critter scampers
-        if (gs.tick % 4 === 0) {
-          gs.critterParticles.push({
-            x: gs.critter.x - gs.critter.facing * 10,
-            y: gs.groundY - 4,
-            vx: -gs.critter.facing * (0.6 + Math.random() * 0.8),
-            vy: -0.4 - Math.random() * 0.7,
-            color: 'rgba(215, 235, 180, 0.75)',
-            size: 3.5 + Math.random() * 2.5,
-            life: 0.6,
-          });
-        }
+        for (let i = gs.critters.length - 1; i >= 0; i--) {
+          const critter = gs.critters[i];
 
-        // Render the cartoon animal
-        if (gs.critter.type === 'bunny') {
-          drawCartoonBunny(ctx, gs.critter.x, gs.critter.y, gs.critter.facing, gs.critter.phase);
-        } else {
-          drawCartoonSquirrel(ctx, gs.critter.x, gs.critter.y, gs.critter.facing, gs.critter.phase);
-        }
+          // Move critter across the lawn
+          critter.x += critter.vx;
+          critter.phase += 0.24;
 
-        // Dog playfully chases the animal across the grass!
-        if (!gameWon) {
-          const dogChaseSpeed = 7.8;
-          if (gs.dog.x < gs.critter.x - 20) {
-            gs.dog.x += dogChaseSpeed;
-            gs.dog.facing = 1;
-            gs.dog.state = 'walking';
-            onAddSteps(1);
-          } else if (gs.dog.x > gs.critter.x + 20) {
-            gs.dog.x -= dogChaseSpeed;
-            gs.dog.facing = -1;
-            gs.dog.state = 'walking';
-            onAddSteps(1);
+          // Ground dust puffs as critter scampers
+          if (gs.tick % 4 === 0) {
+            gs.critterParticles.push({
+              x: critter.x - critter.facing * 10,
+              y: gs.groundY - 4,
+              vx: -critter.facing * (0.6 + Math.random() * 0.8),
+              vy: -0.4 - Math.random() * 0.7,
+              color: 'rgba(215, 235, 180, 0.75)',
+              size: 3.5 + Math.random() * 2.5,
+              life: 0.6,
+            });
+          }
+
+          // Render the cartoon animal
+          if (critter.type === 'bunny') {
+            drawCartoonBunny(ctx, critter.x, critter.y, critter.facing, critter.phase);
+          } else {
+            drawCartoonSquirrel(ctx, critter.x, critter.y, critter.facing, critter.phase);
+          }
+
+          // Proximity to dog
+          const distToDog = Math.hypot(gs.dog.x - critter.x, (gs.dog.y - 20) - critter.y);
+          if (distToDog < minCritterDist) {
+            minCritterDist = distToDog;
+            closestCritter = critter;
           }
 
           // Close encounter: playful leap and bonus!
-          const distToDog = Math.hypot(gs.dog.x - gs.critter.x, (gs.dog.y - 20) - gs.critter.y);
-          if (distToDog < 55 && !gs.critter.jumped) {
-            gs.critter.jumped = true;
-            gs.critter.vx *= 1.45; // Startled scamper burst!
+          if (!gameWon && distToDog < 55 && !critter.jumped) {
+            critter.jumped = true;
+            critter.vx *= 1.45; // Startled scamper burst!
             AudioFX.playCritterSqueak();
             AudioFX.playTreatBonus();
 
-            for (let i = 0; i < 14; i++) {
-              const angle = (Math.PI * 2 / 14) * i;
+            for (let j = 0; j < 14; j++) {
+              const angle = (Math.PI * 2 / 14) * j;
               gs.celebrationParticles.push({
-                x: gs.critter.x,
-                y: gs.critter.y - 14,
+                x: critter.x,
+                y: critter.y - 14,
                 vx: Math.cos(angle) * (3 + Math.random() * 3),
                 vy: Math.sin(angle) * (3 + Math.random() * 3) - 2,
-                color: ['#ffbe0b', '#ff006e', '#00f5d4', '#a855f7'][i % 4],
+                color: ['#ffbe0b', '#ff006e', '#00f5d4', '#a855f7'][j % 4],
                 life: 1.0,
               });
             }
@@ -1359,14 +1356,34 @@ export default function FetchGame({
             setBarkBubble('Almost got it! 🐾✨');
             setTimeout(() => setBarkBubble(null), 1400);
           }
+
+          // Off-screen check
+          if (critter.x < -70 || critter.x > width + 70) {
+            gs.critters.splice(i, 1);
+          }
         }
 
-        // Off-screen check
-        if (gs.critter.x < -70 || gs.critter.x > width + 70) {
-          gs.critter = null;
+        // Dog playfully chases the nearest animal across the grass!
+        if (!gameWon && closestCritter) {
+          const dogChaseSpeed = 7.8;
+          if (gs.dog.x < closestCritter.x - 20) {
+            gs.dog.x += dogChaseSpeed;
+            gs.dog.facing = 1;
+            gs.dog.state = 'walking';
+            onAddSteps(1);
+          } else if (gs.dog.x > closestCritter.x + 20) {
+            gs.dog.x -= dogChaseSpeed;
+            gs.dog.facing = -1;
+            gs.dog.state = 'walking';
+            onAddSteps(1);
+          }
+        }
+
+        // Check if all critters finished scampering
+        if (gs.critters.length === 0) {
           gs.critterCooldown = 750 + Math.floor(Math.random() * 400);
           if (!gs.ball.active && !gs.dog.holdingItem) {
-            setBarkBubble("Where'd it go?! 🐶🐾");
+            setBarkBubble("Where'd they go?! 🐶🐾");
             setTimeout(() => setBarkBubble(null), 1200);
             gs.dog.state = 'idle';
           }
