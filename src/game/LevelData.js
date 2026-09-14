@@ -31,7 +31,7 @@ export const PUZZLE_LEVELS = [
       { x: 190, y: 165 }, { x: 210, y: 165 }
     ],
     treats: [
-      { x: 200, y: 70 } // Golden bone
+      { x: 200, y: 70, shape: "cheese" } // Delectable Swiss Cheese Wedge Triangle
     ],
     hazards: [],
     requiredKibble: 5,
@@ -64,7 +64,7 @@ export const PUZZLE_LEVELS = [
       { x: 190, y: 110 }, { x: 210, y: 110 }, { x: 200, y: 135 }
     ],
     treats: [
-      { x: 200, y: 50 }
+      { x: 200, y: 50, shape: "bone" }
     ],
     hazards: [],
     requiredKibble: 4,
@@ -97,7 +97,7 @@ export const PUZZLE_LEVELS = [
       { x: 140, y: 120 }, { x: 160, y: 120 }, { x: 150, y: 150 }
     ],
     treats: [
-      { x: 270, y: 120 } // In the secret locked vault
+      { x: 270, y: 120, shape: "star" } // Secret Golden Star Cookie in Vault
     ],
     hazards: [],
     requiredKibble: 4,
@@ -134,7 +134,7 @@ export const PUZZLE_LEVELS = [
       { x: 270, y: 130 }, { x: 290, y: 130 }
     ],
     treats: [
-      { x: 280, y: 50 }
+      { x: 280, y: 50, shape: "heart" } // Strawberry Heart Biscuit
     ],
     hazards: [
       { x: 120, y: 90, type: "mud" },
@@ -169,7 +169,7 @@ export const PUZZLE_LEVELS = [
       { x: 240, y: 80 }, { x: 260, y: 80 }, { x: 250, y: 110 }
     ],
     treats: [
-      { x: 150, y: 40 }, { x: 250, y: 40 }
+      { x: 150, y: 40, shape: "cheese" }, { x: 250, y: 40, shape: "star" }
     ],
     hazards: [],
     requiredKibble: 4,
@@ -206,7 +206,7 @@ export const PUZZLE_LEVELS = [
       { x: 260, y: 80 }, { x: 280, y: 80 }, { x: 300, y: 80 }, { x: 270, y: 110 }
     ],
     treats: [
-      { x: 280, y: 50 }
+      { x: 280, y: 50, shape: "bacon" } // Crispy Bacon Chew
     ],
     hazards: [
       { x: 130, y: 80, type: "mud" },
@@ -242,7 +242,7 @@ export const PUZZLE_LEVELS = [
       { x: 250, y: 70 }, { x: 270, y: 70 }, { x: 260, y: 100 }
     ],
     treats: [
-      { x: 200, y: 35 }
+      { x: 200, y: 35, shape: "cheese" } // Swiss Cheese Wedge Triangle
     ],
     hazards: [
       { x: 140, y: 150, type: "mud" }
@@ -279,16 +279,16 @@ export const PUZZLE_LEVELS = [
       { x: 150, y: 90 }, { x: 170, y: 90 }
     ],
     treats: [
-      { x: 160, y: 30 }
+      { x: 160, y: 30, shape: "fish" } // Savory Salmon Bite
     ],
     hazards: [],
     requiredKibble: 4,
   },
   {
     id: 9,
-    name: "Spike Warning & Deflector",
+    name: "Cheese Vault & Deflector",
     difficulty: "medium",
-    tutorial: "Thorns destroy food! Use the spring bumper to deflect kibble safely around!",
+    tutorial: "Bounce the golden star cookie and Swiss cheese wedge into Tuck's dish!",
     bowl: { x: 200, y: 470, w: 90, h: 30 },
     dog: { x: 80, y: 460 },
     pins: [
@@ -311,11 +311,10 @@ export const PUZZLE_LEVELS = [
       { x: 250, y: 70 }, { x: 270, y: 70 }, { x: 260, y: 100 }
     ],
     treats: [
-      { x: 260, y: 35 }
+      { x: 260, y: 35, shape: "star" },
+      { x: 200, y: 150, shape: "cheese" } // Delectable Cheese Triangle
     ],
-    hazards: [
-      { x: 200, y: 215, type: "spikes" }
-    ],
+    hazards: [],
     requiredKibble: 4,
   },
   {
@@ -349,7 +348,7 @@ export const PUZZLE_LEVELS = [
       { x: 280, y: 70 }, { x: 290, y: 100 }
     ],
     treats: [
-      { x: 200, y: 35 }
+      { x: 200, y: 35, shape: "cheese" } // Swiss Cheese Wedge Triangle
     ],
     hazards: [],
     requiredKibble: 5,
@@ -385,7 +384,7 @@ export const PUZZLE_LEVELS = [
       { x: 240, y: 100 }, { x: 260, y: 100 }
     ],
     treats: [
-      { x: 250, y: 40 }
+      { x: 250, y: 40, shape: "bacon" } // Crispy Bacon Chew
     ],
     hazards: [
       { x: 110, y: 70, type: "mud" },
@@ -398,7 +397,7 @@ export const PUZZLE_LEVELS = [
     id: 12,
     name: "The Pin Labyrinth & Trampoline",
     difficulty: "hard",
-    tutorial: "Pull in sequence: Pin 1 ➔ Pin 2 ➔ Pin 3 ➔ Pin 4! Watch for spikes!",
+    tutorial: "Pull in sequence: Pin 1 ➔ Pin 2 ➔ Pin 3 ➔ Pin 4! Guide the cheese triangle & star!",
     bowl: { x: 200, y: 470, w: 90, h: 30 },
     dog: { x: 80, y: 460 },
     pins: [
@@ -423,11 +422,9 @@ export const PUZZLE_LEVELS = [
       { x: 260, y: 50 }, { x: 280, y: 50 }
     ],
     treats: [
-      { x: 120, y: 25 }, { x: 270, y: 25 }
+      { x: 120, y: 25, shape: "star" }, { x: 270, y: 25, shape: "cheese" } // Star Cookie & Swiss Cheese Triangle
     ],
-    hazards: [
-      { x: 200, y: 165, type: "spikes" }
-    ],
+    hazards: [],
     requiredKibble: 3,
   },
   {
@@ -459,7 +456,7 @@ export const PUZZLE_LEVELS = [
       { x: 250, y: 70 }, { x: 270, y: 70 }, { x: 260, y: 95 }
     ],
     treats: [
-      { x: 200, y: 45 }
+      { x: 200, y: 45, shape: "fish" } // Savory Salmon Bite
     ],
     hazards: [
       { x: 140, y: 185, type: "mud" }
@@ -468,9 +465,9 @@ export const PUZZLE_LEVELS = [
   },
   {
     id: 14,
-    name: "The Spike Gauntlet & Pachinko Field",
+    name: "Gourmet Treat Gauntlet & Pachinko",
     difficulty: "hard",
-    tutorial: "Pull pins with precision to bounce treats safely through the spike gaps!",
+    tutorial: "Pull pins with precision to bounce the heart cookie and cheese wedge down safely!",
     bowl: { x: 200, y: 470, w: 90, h: 30 },
     dog: { x: 80, y: 460 },
     pins: [
@@ -494,12 +491,9 @@ export const PUZZLE_LEVELS = [
       { x: 140, y: 95 }, { x: 160, y: 95 }
     ],
     treats: [
-      { x: 150, y: 35 }, { x: 260, y: 35 }
+      { x: 150, y: 35, shape: "heart" }, { x: 260, y: 35, shape: "cheese" } // Puppy Heart Biscuit & Cheese Triangle
     ],
-    hazards: [
-      { x: 260, y: 165, type: "spikes" },
-      { x: 140, y: 245, type: "spikes" }
-    ],
+    hazards: [],
     requiredKibble: 4,
   },
   {
@@ -536,11 +530,10 @@ export const PUZZLE_LEVELS = [
       { x: 260, y: 85 }, { x: 280, y: 85 }
     ],
     treats: [
-      { x: 130, y: 25 }, { x: 200, y: 165 }, { x: 270, y: 25 }
+      { x: 130, y: 25, shape: "cheese" }, { x: 200, y: 165, shape: "bone" }, { x: 270, y: 25, shape: "star" }
     ],
     hazards: [
-      { x: 130, y: 255, type: "mud" },
-      { x: 270, y: 255, type: "spikes" }
+      { x: 130, y: 255, type: "mud" }
     ],
     requiredKibble: 6,
   },

@@ -304,14 +304,59 @@ export default function PinGameCanvas({
       return kibble;
     });
 
-    // 5. Create Golden Bone Treats
+    // 5. Create Gourmet Treats (Bones, Cheese Triangles, Stars, Hearts, Bacon)
     const treatBodies = levelData.treats.map((t) => {
-      const treat = Bodies.rectangle(t.x, t.y, 24, 12, {
-        restitution: 0.3,
-        friction: 0.1,
-        density: 0.002,
-        label: 'treat',
-      });
+      const shape = t.shape || 'bone';
+      let treat;
+      if (shape === 'cheese' || shape === 'triangle') {
+        // Triangular Swiss Cheese Wedge Body
+        treat = Bodies.polygon(t.x, t.y, 3, 15, {
+          restitution: 0.35,
+          friction: 0.1,
+          density: 0.002,
+          label: 'treat',
+        });
+      } else if (shape === 'star') {
+        treat = Bodies.polygon(t.x, t.y, 5, 14, {
+          restitution: 0.35,
+          friction: 0.1,
+          density: 0.002,
+          label: 'treat',
+        });
+      } else if (shape === 'heart') {
+        treat = Bodies.circle(t.x, t.y, 12, {
+          restitution: 0.35,
+          friction: 0.1,
+          density: 0.002,
+          label: 'treat',
+        });
+      } else if (shape === 'bacon') {
+        treat = Bodies.rectangle(t.x, t.y, 28, 10, {
+          restitution: 0.3,
+          friction: 0.1,
+          density: 0.002,
+          label: 'treat',
+        });
+      } else if (shape === 'fish') {
+        treat = Bodies.rectangle(t.x, t.y, 24, 12, {
+          restitution: 0.35,
+          friction: 0.1,
+          density: 0.002,
+          label: 'treat',
+        });
+      } else {
+        treat = Bodies.rectangle(t.x, t.y, 24, 12, {
+          restitution: 0.3,
+          friction: 0.1,
+          density: 0.002,
+          label: 'treat',
+        });
+      }
+      treat.customTreatData = {
+        shape,
+        x: t.x,
+        y: t.y,
+      };
       World.add(world, treat);
       return treat;
     });
@@ -409,13 +454,21 @@ export default function PinGameCanvas({
 
       const curB = bowlPosRef.current;
       treatBody.inBowl = true;
-      // Golden bone crowns the top of the kibble stack!
       const topHeight = Math.min(-20, -16 - (Math.floor(collectedKibbles / 4) * 12));
       treatBody.bowlOffsetX = (collectedTreats % 2 === 1 ? -6 : 6);
       treatBody.bowlOffsetY = topHeight;
       Body.setVelocity(treatBody, { x: 0, y: 0 });
       Body.setStatic(treatBody, true);
-      spawnFloatingText('⭐ +100 TREAT!', curB.x, curB.y - 80);
+
+      const treatShape = treatBody.customTreatData?.shape || 'bone';
+      let treatText = '⭐ +100 TREAT!';
+      if (treatShape === 'cheese' || treatShape === 'triangle') treatText = '🧀 +100 CHEESE TREAT!';
+      else if (treatShape === 'star') treatText = '⭐ +100 STAR COOKIE!';
+      else if (treatShape === 'heart') treatText = '💖 +100 HEART BISCUIT!';
+      else if (treatShape === 'bacon') treatText = '🥓 +100 BACON CHEW!';
+      else if (treatShape === 'fish') treatText = '🐟 +100 SALMON BITE!';
+      else treatText = '🦴 +100 GOLDEN BONE!';
+      spawnFloatingText(treatText, curB.x, curB.y - 80);
     };
 
     Events.on(engine, 'collisionStart', (event) => {
@@ -1376,39 +1429,232 @@ export default function PinGameCanvas({
         ctx.restore();
       });
 
-      // Draw Golden Treats (Bones)
+      // Draw Gourmet Treats (3D Cheese Triangles, Star Cookies, Hearts, Bacon, Fish, Bones)
       treatBodies.forEach((t) => {
         if (!t.parent) return;
         ctx.save();
         ctx.translate(t.position.x, t.position.y);
         ctx.rotate(t.angle);
 
-        // Golden bone shape
-        ctx.fillStyle = '#ffbe0b';
-        ctx.strokeStyle = '#d97706';
-        ctx.lineWidth = 1.5;
-        // Bone center bar
-        ctx.beginPath();
-        ctx.roundRect(-10, -3, 20, 6, 2);
-        ctx.fill();
-        ctx.stroke();
-        // Left bone lobes
-        ctx.beginPath();
-        ctx.arc(-10, -5, 4, 0, Math.PI * 2);
-        ctx.arc(-10, 5, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        // Right bone lobes
-        ctx.beginPath();
-        ctx.arc(10, -5, 4, 0, Math.PI * 2);
-        ctx.arc(10, 5, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        const shape = t.customTreatData?.shape || 'bone';
+
+        if (shape === 'cheese' || shape === 'triangle') {
+          // 🧀 3D Swiss Cheese Wedge Triangle
+          // Triangular body
+          const cheeseGrad = ctx.createLinearGradient(0, -14, 0, 12);
+          cheeseGrad.addColorStop(0, '#fef08a'); // sunny yellow highlight
+          cheeseGrad.addColorStop(0.35, '#fbb024'); // golden cheddar
+          cheeseGrad.addColorStop(0.85, '#f59e0b'); // rich orange
+          cheeseGrad.addColorStop(1, '#b45309'); // baked crust base
+
+          ctx.beginPath();
+          ctx.moveTo(0, -14);
+          ctx.lineTo(13, 11);
+          ctx.lineTo(-13, 11);
+          ctx.closePath();
+          ctx.fillStyle = cheeseGrad;
+          ctx.fill();
+
+          // Darker cheese rind base
+          ctx.beginPath();
+          ctx.moveTo(-13, 11);
+          ctx.lineTo(13, 11);
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#92400e';
+          ctx.stroke();
+
+          // Outer cheddar bevel stroke
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#d97706';
+          ctx.stroke();
+
+          // 3D Swiss Cheese Holes with recessed depth shadow & bottom rim light
+          const cheeseHoles = [
+            { x: -3, y: 1, rx: 3.5, ry: 3 },
+            { x: 4, y: 6, rx: 2.5, ry: 2 },
+            { x: -6, y: 7, rx: 2, ry: 2 },
+            { x: 1, y: -6, rx: 2, ry: 2.2 },
+          ];
+          cheeseHoles.forEach((h) => {
+            // Shadow base
+            ctx.beginPath();
+            ctx.ellipse(h.x, h.y, h.rx, h.ry, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#b45309';
+            ctx.fill();
+            // Dark recessed core
+            ctx.beginPath();
+            ctx.ellipse(h.x, h.y - 0.5, h.rx * 0.75, h.ry * 0.75, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#78350f';
+            ctx.fill();
+            // Inner rim light
+            ctx.beginPath();
+            ctx.arc(h.x, h.y + h.ry * 0.5, h.rx * 0.6, 0.2, Math.PI - 0.2);
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          });
+
+          // Top apex specular shine
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+          ctx.beginPath();
+          ctx.arc(0, -10, 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (shape === 'star') {
+          // ⭐ Baked Golden Star Cookie
+          const starGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, 14);
+          starGrad.addColorStop(0, '#fef08a');
+          starGrad.addColorStop(0.6, '#facc15');
+          starGrad.addColorStop(1, '#ca8a04');
+
+          ctx.beginPath();
+          const spikes = 5;
+          const outerR = 13;
+          const innerR = 6;
+          let rot = (Math.PI / 2) * 3;
+          const step = Math.PI / spikes;
+          ctx.moveTo(0, -outerR);
+          for (let i = 0; i < spikes; i++) {
+            let sx = Math.cos(rot) * outerR;
+            let sy = Math.sin(rot) * outerR;
+            ctx.lineTo(sx, sy);
+            rot += step;
+            sx = Math.cos(rot) * innerR;
+            sy = Math.sin(rot) * innerR;
+            ctx.lineTo(sx, sy);
+            rot += step;
+          }
+          ctx.lineTo(0, -outerR);
+          ctx.closePath();
+          ctx.fillStyle = starGrad;
+          ctx.fill();
+          ctx.strokeStyle = '#a16207';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          // Baked cookie center dot
+          ctx.fillStyle = '#854d0e';
+          ctx.beginPath();
+          ctx.arc(0, 0, 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Little cookie tip perforations
+          for (let i = 0; i < 5; i++) {
+            const angle = (i * 72 - 90) * (Math.PI / 180);
+            ctx.beginPath();
+            ctx.arc(Math.cos(angle) * 7.5, Math.sin(angle) * 7.5, 1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (shape === 'heart') {
+          // 💖 Glazed Puppy Heart Biscuit
+          ctx.beginPath();
+          ctx.moveTo(0, 2);
+          ctx.bezierCurveTo(-11, -8, -13, 6, 0, 13);
+          ctx.bezierCurveTo(13, 6, 11, -8, 0, 2);
+          ctx.closePath();
+
+          const heartGrad = ctx.createLinearGradient(0, -8, 0, 13);
+          heartGrad.addColorStop(0, '#fda4af');
+          heartGrad.addColorStop(0.5, '#f43f5e');
+          heartGrad.addColorStop(1, '#be123c');
+          ctx.fillStyle = heartGrad;
+          ctx.fill();
+          ctx.strokeStyle = '#9f1239';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          // White icing bone sprinkle
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.beginPath();
+          ctx.roundRect(-4, 3, 8, 2.5, 1);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(-4, 2.5, 1.6, 0, Math.PI * 2);
+          ctx.arc(-4, 5.5, 1.6, 0, Math.PI * 2);
+          ctx.arc(4, 2.5, 1.6, 0, Math.PI * 2);
+          ctx.arc(4, 5.5, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (shape === 'bacon') {
+          // 🥓 Savory Wavy Bacon Chew
+          ctx.beginPath();
+          ctx.roundRect(-14, -5, 28, 10, 3);
+          ctx.fillStyle = '#991b1b';
+          ctx.fill();
+          ctx.strokeStyle = '#7f1d1d';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Alternating wavy savory fat layers
+          ctx.fillStyle = '#fed7aa';
+          ctx.beginPath();
+          ctx.ellipse(-4, -1, 12, 1.5, 0.05, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(4, 2, 11, 1.3, -0.05, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (shape === 'fish') {
+          // 🐟 Salmon Bite Biscuit
+          const fishGrad = ctx.createLinearGradient(-10, 0, 10, 0);
+          fishGrad.addColorStop(0, '#fb923c');
+          fishGrad.addColorStop(1, '#f97316');
+          ctx.fillStyle = fishGrad;
+          ctx.beginPath();
+          ctx.ellipse(-2, 0, 9, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Tail
+          ctx.beginPath();
+          ctx.moveTo(6, 0);
+          ctx.lineTo(13, -6);
+          ctx.lineTo(11, 0);
+          ctx.lineTo(13, 6);
+          ctx.closePath();
+          ctx.fillStyle = '#ea580c';
+          ctx.fill();
+
+          // Eye
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(-6, -2, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#1e293b';
+          ctx.beginPath();
+          ctx.arc(-6.5, -2, 0.9, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // 🦴 Classic Golden Bone with 3D Specular Luster
+          const boneGrad = ctx.createLinearGradient(0, -6, 0, 6);
+          boneGrad.addColorStop(0, '#fef08a');
+          boneGrad.addColorStop(0.5, '#f59e0b');
+          boneGrad.addColorStop(1, '#b45309');
+          ctx.fillStyle = boneGrad;
+          ctx.strokeStyle = '#92400e';
+          ctx.lineWidth = 1.2;
+
+          ctx.beginPath();
+          ctx.roundRect(-9, -3, 18, 6, 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(-9, -4, 3.5, 0, Math.PI * 2);
+          ctx.arc(-9, 4, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(9, -4, 3.5, 0, Math.PI * 2);
+          ctx.arc(9, 4, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+          ctx.fillRect(-5, -2, 10, 1.5);
+        }
 
         ctx.restore();
       });
 
-      // Draw Hazards (Mud / Spikes)
+      // Draw Hazards (Mud Sludge / Prickly Thistle Burr)
       hazardBodies.forEach((h) => {
         if (!h.parent) return;
         ctx.save();
@@ -1424,13 +1670,26 @@ export default function PinGameCanvas({
           ctx.arc(-2, -2, 4, 0, Math.PI * 2);
           ctx.fill();
         } else {
-          // Spikes
-          ctx.fillStyle = '#475569';
+          // Prickly Thistle Burr hazard (8 thorny needles radiating with warning core)
+          ctx.fillStyle = '#701a75';
           ctx.beginPath();
-          ctx.moveTo(0, -10);
-          ctx.lineTo(8, 8);
-          ctx.lineTo(-8, 8);
-          ctx.closePath();
+          ctx.arc(0, 0, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#a21caf';
+          ctx.lineWidth = 2;
+          for (let i = 0; i < 8; i++) {
+            const a = (i * Math.PI) / 4;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * 4, Math.sin(a) * 4);
+            ctx.lineTo(Math.cos(a) * 11, Math.sin(a) * 11);
+            ctx.stroke();
+          }
+
+          // Glowing danger center
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.restore();
