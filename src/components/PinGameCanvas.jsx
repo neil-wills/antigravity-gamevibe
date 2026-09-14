@@ -146,8 +146,8 @@ export default function PinGameCanvas({
     // 3. Create Pins
     const pinObjects = levelData.pins.map((p) => {
       const isHoriz = p.orientation === 'horizontal';
-      const bodyWidth = isHoriz ? p.length : 14;
-      const bodyHeight = isHoriz ? 14 : p.length;
+      const bodyWidth = isHoriz ? p.length : 18;
+      const bodyHeight = isHoriz ? 18 : p.length;
 
       const body = Bodies.rectangle(p.x, p.y, bodyWidth, bodyHeight, {
         isStatic: true,
@@ -164,6 +164,8 @@ export default function PinGameCanvas({
         pullDir: p.pullDir,
         offset: 0,
         isRemoved: false,
+        isSlidingOut: false,
+        isHovered: false,
       };
       World.add(world, body);
       return body;
@@ -246,9 +248,63 @@ export default function PinGameCanvas({
       });
     });
 
-    // Canvas Pointer Interaction for Pins
+    // Helpers for Pin Ring positioning and hit-testing
+    const getPinRingPos = (pinBody) => {
+      const pData = pinBody.customPinData;
+      const isHoriz = pData.orientation === 'horizontal';
+      const pW = isHoriz ? pData.length : 18;
+      const pH = isHoriz ? 18 : pData.length;
+      const handleX = isHoriz ? (pData.pullDir === 'right' ? pW / 2 : -pW / 2) : 0;
+      const handleY = !isHoriz ? (pData.pullDir === 'down' ? pH / 2 : -pH / 2) : 0;
+      const ringOffset = 28;
+      const ringRelX = isHoriz ? (pData.pullDir === 'right' ? handleX + ringOffset : handleX - ringOffset) : 0;
+      const ringRelY = !isHoriz ? (pData.pullDir === 'down' ? handleY + ringOffset : handleY - ringOffset) : 0;
+      return {
+        x: pinBody.position.x + ringRelX,
+        y: pinBody.position.y + ringRelY,
+        relX: ringRelX,
+        relY: ringRelY,
+        handleRelX: handleX,
+        handleRelY: handleY,
+        pW,
+        pH,
+        isHoriz,
+      };
+    };
+
+    const checkPinHit = (pinBody, coords) => {
+      const pData = pinBody.customPinData;
+      if (pData.isRemoved || pData.isSlidingOut) return false;
+      const { x: ringX, y: ringY } = getPinRingPos(pinBody);
+      const distToRing = Math.hypot(coords.x - ringX, coords.y - ringY);
+      if (distToRing <= 32) return true;
+      const bounds = pinBody.bounds;
+      if (
+        coords.x >= bounds.min.x - 16 &&
+        coords.x <= bounds.max.x + 16 &&
+        coords.y >= bounds.min.y - 16 &&
+        coords.y <= bounds.max.y + 16
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const startSlideOut = (pinBody) => {
+      const pData = pinBody.customPinData;
+      if (pData.isSlidingOut || pData.isRemoved) return;
+      pData.isSlidingOut = true;
+      AudioFX.playPinSlide();
+      isDragging = false;
+      activePin = null;
+      dragPinRef.current = null;
+      canvas.style.cursor = 'default';
+    };
+
+    // Canvas Pointer Interaction for Pins (Tap to Pull or Drag to Pull)
     let isDragging = false;
     let dragStartPos = { x: 0, y: 0 };
+    let dragStartTime = 0;
     let activePin = null;
 
     const getCanvasCoords = (e) => {
@@ -263,83 +319,86 @@ export default function PinGameCanvas({
 
     const handlePointerDown = (e) => {
       const coords = getCanvasCoords(e);
-      // Check if user clicked on a pin's handle or body
       for (const pinBody of pinObjects) {
-        if (pinBody.customPinData.isRemoved) continue;
-        const pData = pinBody.customPinData;
-        const isHoriz = pData.orientation === 'horizontal';
-        const bounds = pinBody.bounds;
-
-        // Expanded clickable grab area
-        if (
-          coords.x >= bounds.min.x - 25 &&
-          coords.x <= bounds.max.x + 25 &&
-          coords.y >= bounds.min.y - 25 &&
-          coords.y <= bounds.max.y + 25
-        ) {
+        if (checkPinHit(pinBody, coords)) {
           isDragging = true;
           activePin = pinBody;
           dragPinRef.current = pinBody;
           dragStartPos = coords;
-          AudioFX.playPinSlide();
+          dragStartTime = performance.now();
+          canvas.style.cursor = 'grabbing';
           break;
         }
       }
     };
 
     const handlePointerMove = (e) => {
-      if (!isDragging || !activePin) return;
       const coords = getCanvasCoords(e);
+      if (!isDragging || !activePin) {
+        let anyHover = false;
+        for (const pinBody of pinObjects) {
+          if (checkPinHit(pinBody, coords)) {
+            pinBody.customPinData.isHovered = true;
+            anyHover = true;
+          } else {
+            pinBody.customPinData.isHovered = false;
+          }
+        }
+        canvas.style.cursor = anyHover ? 'pointer' : 'default';
+        return;
+      }
+
       const pData = activePin.customPinData;
       const isHoriz = pData.orientation === 'horizontal';
 
       if (isHoriz) {
         const deltaX = coords.x - dragStartPos.x;
-        // Check direction constraint
-        if ((pData.pullDir === 'right' && deltaX > 0) || (pData.pullDir === 'left' && deltaX < 0)) {
+        const isValid = (pData.pullDir === 'right' && deltaX > 0) || (pData.pullDir === 'left' && deltaX < 0);
+        if (isValid) {
           pData.offset = deltaX;
           const newX = pData.origX + deltaX;
           Body.setPosition(activePin, { x: newX, y: pData.origY });
 
-          // Threshold to pull out completely
-          if (Math.abs(deltaX) > pData.length * 0.65) {
-            removePin(activePin);
+          if (Math.abs(deltaX) > pData.length * 0.35) {
+            startSlideOut(activePin);
           }
         }
       } else {
         const deltaY = coords.y - dragStartPos.y;
-        if ((pData.pullDir === 'down' && deltaY > 0) || (pData.pullDir === 'up' && deltaY < 0)) {
+        const isValid = (pData.pullDir === 'down' && deltaY > 0) || (pData.pullDir === 'up' && deltaY < 0);
+        if (isValid) {
           pData.offset = deltaY;
           const newY = pData.origY + deltaY;
           Body.setPosition(activePin, { x: pData.origX, y: newY });
 
-          if (Math.abs(deltaY) > pData.length * 0.65) {
-            removePin(activePin);
+          if (Math.abs(deltaY) > pData.length * 0.35) {
+            startSlideOut(activePin);
           }
         }
       }
     };
 
-    const removePin = (pinBody) => {
-      pinBody.customPinData.isRemoved = true;
-      AudioFX.playPinSlide();
-      World.remove(world, pinBody);
-      isDragging = false;
-      activePin = null;
-      dragPinRef.current = null;
-    };
-
-    const handlePointerUp = () => {
+    const handlePointerUp = (e) => {
       if (!isDragging || !activePin) return;
-      // Snap back if not pulled far enough
+      const coords = getCanvasCoords(e);
       const pData = activePin.customPinData;
-      if (!pData.isRemoved) {
+      const elapsed = performance.now() - dragStartTime;
+      const dist = Math.hypot(coords.x - dragStartPos.x, coords.y - dragStartPos.y);
+
+      const isQuickTap = dist < 18 && elapsed < 550;
+      const pulledFarEnough = Math.abs(pData.offset) >= 15;
+
+      if (isQuickTap || pulledFarEnough) {
+        startSlideOut(activePin);
+      } else {
         pData.offset = 0;
         Body.setPosition(activePin, { x: pData.origX, y: pData.origY });
       }
+
       isDragging = false;
       activePin = null;
       dragPinRef.current = null;
+      canvas.style.cursor = 'default';
     };
 
     canvas.addEventListener('pointerdown', handlePointerDown);
@@ -350,6 +409,31 @@ export default function PinGameCanvas({
     let animId;
     const render = () => {
       Matter.Engine.update(engine, 1000 / 60);
+
+      // Advance sliding pins frame-by-frame with synchronous physics updates
+      pinObjects.forEach((pinBody) => {
+        const pData = pinBody.customPinData;
+        if (!pData.isSlidingOut || pData.isRemoved) return;
+
+        const slideSpeed = 16;
+        if (pData.pullDir === 'right' || pData.pullDir === 'down') {
+          pData.offset += slideSpeed;
+        } else {
+          pData.offset -= slideSpeed;
+        }
+
+        const isHoriz = pData.orientation === 'horizontal';
+        const newX = isHoriz ? pData.origX + pData.offset : pData.origX;
+        const newY = !isHoriz ? pData.origY + pData.offset : pData.origY;
+        Body.setPosition(pinBody, { x: newX, y: newY });
+
+        // Remove from Matter world once cleared beyond arena
+        if (Math.abs(pData.offset) > pData.length + 90) {
+          pData.isRemoved = true;
+          World.remove(world, pinBody);
+        }
+      });
+
       ctx.clearRect(0, 0, width, height);
 
       // Draw Walls & Chambers
@@ -404,8 +488,10 @@ export default function PinGameCanvas({
       ctx.fill();
       ctx.restore();
 
-      // Draw Pins
-      pinObjects.forEach((pinBody) => {
+      // Draw Classic "Pull the Pin" Style Pins
+      const now = performance.now();
+
+      pinObjects.forEach((pinBody, pinIdx) => {
         const pData = pinBody.customPinData;
         if (pData.isRemoved) return;
 
@@ -413,48 +499,313 @@ export default function PinGameCanvas({
         ctx.translate(pinBody.position.x, pinBody.position.y);
 
         const isHoriz = pData.orientation === 'horizontal';
-        const pW = isHoriz ? pData.length : 14;
-        const pH = isHoriz ? 14 : pData.length;
+        const pW = isHoriz ? pData.length : 18;
+        const pH = isHoriz ? 18 : pData.length;
 
-        // Pin Shaft (Metallic Golden rod)
-        const pinGrad = ctx.createLinearGradient(-pW / 2, -pH / 2, pW / 2, pH / 2);
-        pinGrad.addColorStop(0, '#ffe066');
-        pinGrad.addColorStop(0.5, '#ffd166');
-        pinGrad.addColorStop(1, '#f77f00');
+        // Determine handle and tip coordinates
+        let handleX = 0, handleY = 0;
+        let tipX = 0, tipY = 0;
+        if (isHoriz) {
+          if (pData.pullDir === 'right') {
+            handleX = pW / 2;
+            tipX = -pW / 2;
+          } else {
+            handleX = -pW / 2;
+            tipX = pW / 2;
+          }
+        } else {
+          if (pData.pullDir === 'down') {
+            handleY = pH / 2;
+            tipY = -pH / 2;
+          } else {
+            handleY = -pH / 2;
+            tipY = pH / 2;
+          }
+        }
 
-        ctx.fillStyle = pinGrad;
-        ctx.strokeStyle = '#d97706';
+        // Prominent Ring position extending cleanly outside the wall
+        const ringOffset = 28;
+        const ringX = isHoriz ? (pData.pullDir === 'right' ? handleX + ringOffset : handleX - ringOffset) : 0;
+        const ringY = !isHoriz ? (pData.pullDir === 'down' ? handleY + ringOffset : handleY - ringOffset) : 0;
+        const ringOuterRad = 22;
+        const ringHoleRad = 12;
+
+        // 1. Soft Realistic Drop Shadow under the entire pin assembly
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 4;
+        ctx.fillStyle = '#b45309';
+        ctx.beginPath();
+        ctx.roundRect(-pW / 2, -pH / 2, pW, pH, 5);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(ringX, ringY, ringOuterRad, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 2. Wall Mounting Bracket Grommet with Rivets where pin penetrates wall
+        ctx.save();
+        ctx.fillStyle = '#334155';
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1.5;
+        if (isHoriz) {
+          ctx.beginPath();
+          ctx.roundRect(handleX - 4, -pH / 2 - 4, 8, pH + 8, 2);
+          ctx.fill();
+          ctx.stroke();
+          // Silver rivet dots
+          ctx.fillStyle = '#cbd5e1';
+          ctx.beginPath();
+          ctx.arc(handleX, -pH / 2 - 1, 1.8, 0, Math.PI * 2);
+          ctx.arc(handleX, pH / 2 + 1, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.roundRect(-pW / 2 - 4, handleY - 4, pW + 8, 8, 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#cbd5e1';
+          ctx.beginPath();
+          ctx.arc(-pW / 2 - 1, handleY, 1.8, 0, Math.PI * 2);
+          ctx.arc(pW / 2 + 1, handleY, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // 3. Pin Shaft (3D Cylindrical Metallic Shading)
+        if (isHoriz) {
+          const shaftGrad = ctx.createLinearGradient(0, -pH / 2, 0, pH / 2);
+          shaftGrad.addColorStop(0, '#fffbeb');   // bright rim light
+          shaftGrad.addColorStop(0.18, '#fef08a'); // gold specular highlight
+          shaftGrad.addColorStop(0.48, '#f59e0b'); // rich warm gold
+          shaftGrad.addColorStop(0.8, '#d97706');  // deep amber tone
+          shaftGrad.addColorStop(1, '#78350f');    // dark bottom edge
+          ctx.fillStyle = shaftGrad;
+          ctx.beginPath();
+          ctx.roundRect(-pW / 2, -pH / 2, pW, pH, 5);
+          ctx.fill();
+
+          // Longitudinal Chrome Specular Stripe along top of rod
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.fillRect(-pW / 2 + 6, -pH / 2 + 2, pW - 12, 2.5);
+
+          // Lathed Machined Groove Rings along the shaft
+          [-0.25, 0, 0.25].forEach((ratio) => {
+            const gx = ratio * pW;
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(gx - 1, -pH / 2 + 1, 2, pH - 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.fillRect(gx + 1, -pH / 2 + 1, 1, pH - 2);
+          });
+
+          // Tapered Conical Locking Bullet Tip
+          ctx.fillStyle = '#b45309';
+          ctx.strokeStyle = '#78350f';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          if (pData.pullDir === 'right') {
+            ctx.moveTo(tipX, -pH / 2);
+            ctx.lineTo(tipX - 10, 0);
+            ctx.lineTo(tipX, pH / 2);
+          } else {
+            ctx.moveTo(tipX, -pH / 2);
+            ctx.lineTo(tipX + 10, 0);
+            ctx.lineTo(tipX, pH / 2);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          // Vertical Pin Shaft
+          const shaftGrad = ctx.createLinearGradient(-pW / 2, 0, pW / 2, 0);
+          shaftGrad.addColorStop(0, '#fffbeb');
+          shaftGrad.addColorStop(0.18, '#fef08a');
+          shaftGrad.addColorStop(0.48, '#f59e0b');
+          shaftGrad.addColorStop(0.8, '#d97706');
+          shaftGrad.addColorStop(1, '#78350f');
+          ctx.fillStyle = shaftGrad;
+          ctx.beginPath();
+          ctx.roundRect(-pW / 2, -pH / 2, pW, pH, 5);
+          ctx.fill();
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.fillRect(-pW / 2 + 2, -pH / 2 + 6, 2.5, pH - 12);
+
+          // Grooves
+          [-0.25, 0, 0.25].forEach((ratio) => {
+            const gy = ratio * pH;
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(-pW / 2 + 1, gy - 1, pW - 2, 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.fillRect(-pW / 2 + 1, gy + 1, pW - 2, 1);
+          });
+
+          // Conical Bullet Tip
+          ctx.fillStyle = '#b45309';
+          ctx.strokeStyle = '#78350f';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          if (pData.pullDir === 'down') {
+            ctx.moveTo(-pW / 2, tipY);
+            ctx.lineTo(0, tipY - 10);
+            ctx.lineTo(pW / 2, tipY);
+          } else {
+            ctx.moveTo(-pW / 2, tipY);
+            ctx.lineTo(0, tipY + 10);
+            ctx.lineTo(pW / 2, tipY);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // 4. Dynamic Traveling Gleam Shine across the shaft
+        const gleamCycle = 2600;
+        const gleamTime = (now + pinIdx * 700) % gleamCycle;
+        if (gleamTime < 850) {
+          const tGleam = gleamTime / 850;
+          ctx.save();
+          if (isHoriz) {
+            const gx = -pW / 2 + tGleam * pW;
+            const gleamGrad = ctx.createLinearGradient(gx - 22, 0, gx + 22, 0);
+            gleamGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            gleamGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+            gleamGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = gleamGrad;
+            ctx.fillRect(gx - 22, -pH / 2, 44, pH);
+          } else {
+            const gy = -pH / 2 + tGleam * pH;
+            const gleamGrad = ctx.createLinearGradient(0, gy - 22, 0, gy + 22);
+            gleamGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            gleamGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+            gleamGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = gleamGrad;
+            ctx.fillRect(-pW / 2, gy - 22, pW, 44);
+          }
+          ctx.restore();
+        }
+
+        // 5. Heavy Brass Hinge Collar connecting Rod to Pull Ring
+        ctx.fillStyle = '#b45309';
+        ctx.strokeStyle = '#78350f';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.roundRect(-pW / 2, -pH / 2, pW, pH, 6);
+        ctx.arc(handleX, handleY, 9, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // Pin Pull Handle (Ring on outer edge)
-        const handleX = isHoriz ? (pData.pullDir === 'right' ? pW / 2 : -pW / 2) : 0;
-        const handleY = !isHoriz ? (pData.pullDir === 'down' ? pH / 2 : -pH / 2) : 0;
+        // Connecting Hinge Bar
+        ctx.fillStyle = '#f59e0b';
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(
+          Math.min(handleX, ringX) - 2,
+          Math.min(handleY, ringY) - 5,
+          Math.abs(handleX - ringX) + 4 || 10,
+          Math.abs(handleY - ringY) + 10 || 10,
+          4
+        );
+        ctx.fill();
+        ctx.stroke();
 
-        ctx.fillStyle = '#ff3366';
-        ctx.strokeStyle = '#ffffff';
+        // Center Pivot Bolt Rivet
+        ctx.fillStyle = '#fef08a';
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(handleX, handleY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 6. Hover / Active Golden Halo Glow
+        if (pData.isHovered || (isDragging && activePin === pinBody)) {
+          ctx.save();
+          ctx.shadowColor = '#fde047';
+          ctx.shadowBlur = 14;
+          ctx.strokeStyle = 'rgba(254, 240, 138, 0.85)';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(ringX, ringY, ringOuterRad + 2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 7. The Classic "Pull the Pin" Hollow Donut Loop (True Hole Cutout)
+        ctx.save();
+        const ringGrad = ctx.createRadialGradient(ringX - 6, ringY - 6, 4, ringX, ringY, ringOuterRad + 2);
+        ringGrad.addColorStop(0, '#fffbeb');
+        ringGrad.addColorStop(0.2, '#fde047');
+        ringGrad.addColorStop(0.55, '#f59e0b');
+        ringGrad.addColorStop(0.85, '#d97706');
+        ringGrad.addColorStop(1, '#78350f');
+
+        ctx.fillStyle = ringGrad;
+        ctx.beginPath();
+        // Outer loop (clockwise)
+        ctx.arc(ringX, ringY, ringOuterRad, 0, Math.PI * 2, false);
+        // Inner cutout hole (counter-clockwise -> evenodd punch-out)
+        ctx.arc(ringX, ringY, ringHoleRad, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.fill('evenodd');
+
+        // Outer polished gold bevel stroke
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ringX, ringY, ringOuterRad, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner dark hole bevel stroke
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(ringX, ringY, ringHoleRad, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Top-left Specular Crescent Arc Glint
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.arc(handleX, handleY, 14, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(ringX, ringY, ringOuterRad - 3, -Math.PI * 0.85, -Math.PI * 0.15);
         ctx.stroke();
+        ctx.restore();
 
-        // Arrow on pin handle
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px Fredoka, sans-serif';
+        // 8. Animated Pulsing Pull Direction Cue
+        const bounce = Math.sin(now * 0.008) * 3.5;
+        let cueX = ringX;
+        let cueY = ringY;
+        let arrowStr = '➔';
+        if (isHoriz) {
+          if (pData.pullDir === 'right') {
+            cueX += bounce;
+            arrowStr = '➔';
+          } else {
+            cueX -= bounce;
+            arrowStr = '⬅';
+          }
+        } else {
+          if (pData.pullDir === 'down') {
+            cueY += bounce;
+            arrowStr = '⬇';
+          } else {
+            cueY -= bounce;
+            arrowStr = '⬆';
+          }
+        }
+
+        ctx.save();
+        ctx.fillStyle = '#b91c1c';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.font = '900 13px Fredoka, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const arrowChar = isHoriz
-          ? pData.pullDir === 'right'
-            ? '➔'
-            : '⬅'
-          : pData.pullDir === 'down'
-          ? '⬇'
-          : '⬆';
-        ctx.fillText(arrowChar, handleX, handleY);
+        ctx.strokeText(arrowStr, cueX, cueY);
+        ctx.fillText(arrowStr, cueX, cueY);
+        ctx.restore();
 
         ctx.restore();
       });

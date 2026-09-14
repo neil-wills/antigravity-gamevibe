@@ -61,29 +61,45 @@ class SoundController {
     osc.stop(t + 0.16);
   }
 
-  // Pin sliding out sound
+  // Pin sliding out sound (crisp metallic cotter-pin slide & swoosh)
   playPinSlide() {
     if (this.muted) return;
     this.init();
     if (!this.ctx) return;
 
     const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    // Harmonic 1: Metallic chime
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(480, t);
+    osc1.frequency.exponentialRampToValueAtTime(1250, t + 0.18);
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(300, t);
-    osc.frequency.exponentialRampToValueAtTime(800, t + 0.12);
+    gain1.gain.setValueAtTime(0.01, t);
+    gain1.gain.linearRampToValueAtTime(0.22, t + 0.02);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
 
-    gain.gain.setValueAtTime(0.15, t);
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.14);
+    osc1.connect(gain1);
+    gain1.connect(this.ctx.destination);
+    osc1.start(t);
+    osc1.stop(t + 0.24);
 
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    // Harmonic 2: High metallic resonance
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1400, t);
+    osc2.frequency.exponentialRampToValueAtTime(2200, t + 0.15);
 
-    osc.start(t);
-    osc.stop(t + 0.15);
+    gain2.gain.setValueAtTime(0.08, t);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+    osc2.connect(gain2);
+    gain2.connect(this.ctx.destination);
+    osc2.start(t);
+    osc2.stop(t + 0.18);
   }
+
 
   // Kibble dropping in bowl
   playKibbleDrop() {
