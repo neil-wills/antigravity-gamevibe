@@ -37,6 +37,7 @@ export default function PoopPatrolGame({
     angle: 0,
     speed: 0,
     turn: 0,
+    target: null, // { x, y } for point-and-click mouse steering
     poops: [],
     grassGrid: [],
     explosions: [],
@@ -60,6 +61,7 @@ export default function PoopPatrolGame({
     setPoopsCleared(0);
     setGrassMowedPct(0);
     setGameWon(false);
+    mowerState.current.target = null;
     setGameResetCount((c) => c + 1);
   };
 
@@ -129,6 +131,34 @@ export default function PoopPatrolGame({
       window.addEventListener('keydown', handleKeyDown);
       window.addEventListener('keyup', handleKeyUp);
 
+      // Point & Click Mouse Steering Listeners
+      let isPointerDown = false;
+
+      const handlePointerDown = (e) => {
+        if (gameWon) return;
+        isPointerDown = true;
+        const rect = canvas.getBoundingClientRect();
+        const clickX = (e.clientX - rect.left) * (width / rect.width);
+        const clickY = (e.clientY - rect.top) * (height / rect.height);
+        ms.target = { x: clickX, y: clickY };
+      };
+
+      const handlePointerMove = (e) => {
+        if (!isPointerDown || gameWon) return;
+        const rect = canvas.getBoundingClientRect();
+        const curX = (e.clientX - rect.left) * (width / rect.width);
+        const curY = (e.clientY - rect.top) * (height / rect.height);
+        ms.target = { x: curX, y: curY };
+      };
+
+      const handlePointerUp = () => {
+        isPointerDown = false;
+      };
+
+      canvas.addEventListener('pointerdown', handlePointerDown);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+
       // Loop for Mower Mode
       const mowerLoop = () => {
         ctx.clearRect(0, 0, width, height);
@@ -136,13 +166,55 @@ export default function PoopPatrolGame({
         // Control handling if game not won
         if (!gameWon) {
           const keys = ms.activeKeys;
-          const maxSpeed = 3.6;
-          if (keys['arrowup'] || keys['w']) ms.speed = Math.min(ms.speed + 0.2, maxSpeed);
-          else if (keys['arrowdown'] || keys['s']) ms.speed = Math.max(ms.speed - 0.2, -maxSpeed * 0.6);
-          else ms.speed *= 0.92;
+          const hasManualKey =
+            keys['arrowup'] || keys['w'] ||
+            keys['arrowdown'] || keys['s'] ||
+            keys['arrowleft'] || keys['a'] ||
+            keys['arrowright'] || keys['d'];
 
-          if (keys['arrowleft'] || keys['a']) ms.angle -= 0.055;
-          if (keys['arrowright'] || keys['d']) ms.angle += 0.055;
+          if (hasManualKey) {
+            // Manual keyboard control overrides mouse target
+            ms.target = null;
+            const maxSpeed = 3.8;
+            if (keys['arrowup'] || keys['w']) ms.speed = Math.min(ms.speed + 0.22, maxSpeed);
+            else if (keys['arrowdown'] || keys['s']) ms.speed = Math.max(ms.speed - 0.22, -maxSpeed * 0.6);
+            else ms.speed *= 0.92;
+
+            if (keys['arrowleft'] || keys['a']) ms.angle -= 0.058;
+            if (keys['arrowright'] || keys['d']) ms.angle += 0.058;
+          } else if (ms.target) {
+            // Point & Click Mouse Steering
+            const dx = ms.target.x - ms.x;
+            const dy = ms.target.y - ms.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > 15) {
+              const targetAngle = Math.atan2(dy, dx);
+              let diffAngle = targetAngle - ms.angle;
+
+              // Normalize diffAngle to [-PI, PI]
+              while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;
+              while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
+
+              // Smooth turning towards mouse target
+              const turnSpeed = Math.min(Math.abs(diffAngle), 0.095);
+              ms.angle += Math.sign(diffAngle) * turnSpeed;
+
+              // Forward acceleration aligned with steering
+              const align = Math.max(0.4, Math.cos(diffAngle));
+              const targetMaxSpeed = Math.min(4.2, dist * 0.15);
+              ms.speed = Math.min(ms.speed + 0.25, targetMaxSpeed * align);
+            } else {
+              // Reached target point
+              ms.speed *= 0.75;
+              if (!isPointerDown) {
+                ms.target = null;
+              }
+            }
+          } else {
+            // Natural coasting deceleration
+            ms.speed *= 0.92;
+          }
 
           ms.x += Math.cos(ms.angle) * ms.speed;
           ms.y += Math.sin(ms.angle) * ms.speed;
@@ -284,6 +356,45 @@ export default function PoopPatrolGame({
           }
         }
 
+        // Draw Point & Click Mouse Target Indicator on Lawn
+        if (ms.target && !gameWon) {
+          ctx.save();
+          // Dotted guide line from mower to target
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.lineWidth = 2.2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(ms.x, ms.y);
+          ctx.lineTo(ms.target.x, ms.target.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Animated pulsing mowing beacon
+          const pulse = Math.sin(Date.now() * 0.009) * 3.5;
+          ctx.shadowColor = '#facc15';
+          ctx.shadowBlur = 10;
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(ms.target.x, ms.target.y, 14 + pulse, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Center crosshair dot
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(ms.target.x, ms.target.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.font = 'bold 11px Fredoka, sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2.5;
+          ctx.textAlign = 'center';
+          ctx.strokeText('🎯 MOW HERE', ms.target.x, ms.target.y - 18);
+          ctx.fillText('🎯 MOW HERE', ms.target.x, ms.target.y - 18);
+          ctx.restore();
+        }
+
         // Draw Ride-Along Lawn Mower
         ctx.save();
         ctx.translate(ms.x, ms.y);
@@ -336,6 +447,9 @@ export default function PoopPatrolGame({
         cancelAnimationFrame(animId);
         window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('keyup', handleKeyUp);
+        canvas.removeEventListener('pointerdown', handlePointerDown);
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
         AudioFX.stopMower();
       };
     } else {
@@ -500,7 +614,11 @@ export default function PoopPatrolGame({
 
       {/* Arcade Viewport */}
       <div className="arcade-viewport">
-        <canvas ref={canvasRef} className="arcade-canvas" />
+        <canvas
+          ref={canvasRef}
+          className="arcade-canvas"
+          style={{ cursor: mode === 'mower' ? 'crosshair' : 'pointer' }}
+        />
 
         {/* Dog spectator in garden corner - Click to Bark! */}
         <div
@@ -537,17 +655,20 @@ export default function PoopPatrolGame({
               position: 'absolute',
               bottom: 8,
               left: 12,
-              background: 'rgba(255,255,255,0.92)',
-              padding: '4px 14px',
+              background: 'rgba(255,255,255,0.94)',
+              backdropFilter: 'blur(8px)',
+              padding: '5px 16px',
               borderRadius: '16px',
-              fontSize: '0.8rem',
+              fontSize: '0.82rem',
               fontFamily: 'Fredoka, sans-serif',
-              color: '#444',
+              fontWeight: 600,
+              color: '#333',
               pointerEvents: 'none',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             }}
           >
             {mode === 'mower'
-              ? '💥 Drive over poops with the lawn mower to EXPLODE them! Clear all 10 to win!'
+              ? '💥 Point & click anywhere (or use Arrows/WASD) to steer the lawnmower & EXPLODE poops!'
               : '👆 Tap the poops with your scooper to clean up all 10!'}
           </div>
         )}
