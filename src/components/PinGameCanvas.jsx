@@ -14,6 +14,7 @@ export default function PinGameCanvas({
   onAddPoints,
   onAddSteps,
   onSelectLevel,
+  onPlayBonusRound,
 }) {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
@@ -32,6 +33,8 @@ export default function PinGameCanvas({
   const [poopEvent, setPoopEvent] = useState(null); // null or { x, y }
   const [floatingPoints, setFloatingPoints] = useState([]);
   const [barkBubble, setBarkBubble] = useState(null);
+  const [bonusRound, setBonusRound] = useState(null);
+  const [lockedPinAlert, setLockedPinAlert] = useState(null);
   const barkTimerRef = useRef(null);
 
   // Movable Food Bowl State
@@ -60,6 +63,8 @@ export default function PinGameCanvas({
     setDogPos({ ...found.dog });
     setPawPrints([]);
     setPoopEvent(null);
+    setBonusRound(null);
+    setLockedPinAlert(null);
     bowlPosRef.current = {
       x: found.bowl.x,
       y: found.bowl.y,
@@ -154,11 +159,22 @@ export default function PinGameCanvas({
     // 1. Create Boundaries / Walls
     const wallBodies = [];
     levelData.walls.forEach((w) => {
+      const isBouncy = !!w.isBouncy;
       const wall = Bodies.rectangle(w.x, w.y, w.w, w.h, {
         isStatic: true,
         angle: w.angle || 0,
-        render: { fillStyle: '#e0a96d' },
+        restitution: isBouncy ? 1.25 : 0.1,
+        friction: isBouncy ? 0.02 : 0.5,
+        label: isBouncy ? 'bouncyWall' : 'wall',
+        render: { fillStyle: w.color || (isBouncy ? '#06d6a0' : '#e0a96d') },
       });
+      wall.customWallData = {
+        isBouncy,
+        angle: w.angle || 0,
+        w: w.w,
+        h: w.h,
+        color: w.color,
+      };
       wallBodies.push(wall);
     });
 
@@ -168,6 +184,26 @@ export default function PinGameCanvas({
     const rightWall = Bodies.rectangle(410, 260, 20, 520, { isStatic: true });
     wallBodies.push(floor, leftWall, rightWall);
     World.add(world, wallBodies);
+
+    // 1b. Create Bouncy Bumpers
+    const bumperBodies = (levelData.bumpers || []).map((bmp, idx) => {
+      const bBody = Bodies.circle(bmp.x, bmp.y, bmp.radius || 22, {
+        isStatic: true,
+        restitution: 1.45,
+        friction: 0.0,
+        label: 'bumper',
+      });
+      bBody.customBumperData = {
+        id: `bmp_${idx}`,
+        x: bmp.x,
+        y: bmp.y,
+        radius: bmp.radius || 22,
+        color: bmp.color || '#ec4899',
+        pulse: 0,
+      };
+      World.add(world, bBody);
+      return bBody;
+    });
 
     // 2. Create Dog Food Bowl with Solid Basin & Collection Sensor (Movable!)
     const initialBowlPos = bowlPosRef.current;
@@ -248,6 +284,8 @@ export default function PinGameCanvas({
         isRemoved: false,
         isSlidingOut: false,
         isHovered: false,
+        lockedBy: p.lockedBy || null,
+        rattle: 0,
       };
       World.add(world, body);
       return body;
@@ -336,6 +374,27 @@ export default function PinGameCanvas({
         };
         checkBody(bodyA, bodyB);
         checkBody(bodyB, bodyA);
+
+        const checkBumper = (target, other) => {
+          if (target.label === 'bumper' && (other.label === 'kibble' || other.label === 'treat')) {
+            if (target.customBumperData) {
+              target.customBumperData.pulse = 1.0;
+            }
+            AudioFX.playBumperBounce();
+            const dx = other.position.x - target.position.x;
+            const dy = other.position.y - target.position.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            Body.applyForce(other, other.position, {
+              x: (dx / dist) * 0.008,
+              y: (dy / dist) * 0.008,
+            });
+            spawnFloatingText('💥 BOING!', target.position.x, target.position.y - 18);
+          } else if (target.label === 'bouncyWall' && (other.label === 'kibble' || other.label === 'treat')) {
+            AudioFX.playBumperBounce();
+          }
+        };
+        checkBumper(bodyA, bodyB);
+        checkBumper(bodyB, bodyA);
       });
     });
 
@@ -435,6 +494,21 @@ export default function PinGameCanvas({
       // 2. Check if user clicked on a pin's handle or body
       for (const pinBody of pinObjects) {
         if (checkPinHit(pinBody, coords)) {
+          const pData = pinBody.customPinData;
+          // Check if pin is locked by an unremoved pin!
+          if (pData.lockedBy) {
+            const blockingPin = pinObjects.find(
+              (p) => p.customPinData.id === pData.lockedBy && !p.customPinData.isRemoved
+            );
+            if (blockingPin) {
+              pData.rattle = 20;
+              AudioFX.playLockedRattle();
+              setLockedPinAlert(`🔒 Pin ${pData.id} is blocked by Pin ${pData.lockedBy}! Pull Pin ${pData.lockedBy} first!`);
+              setTimeout(() => setLockedPinAlert(null), 2500);
+              return;
+            }
+          }
+
           isDragging = true;
           activePin = pinBody;
           dragPinRef.current = pinBody;
@@ -506,11 +580,17 @@ export default function PinGameCanvas({
         const deltaX = coords.x - dragStartPos.x;
         const isValid = (pData.pullDir === 'right' && deltaX > 0) || (pData.pullDir === 'left' && deltaX < 0);
         if (isValid) {
+          const prevStep = Math.floor(Math.abs(pData.offset || 0) / 20);
           pData.offset = deltaX;
+          const nextStep = Math.floor(Math.abs(deltaX) / 20);
+          if (nextStep !== prevStep) {
+            AudioFX.playPinRatchet();
+          }
+
           const newX = pData.origX + deltaX;
           Body.setPosition(activePin, { x: newX, y: pData.origY });
 
-          if (Math.abs(deltaX) > pData.length * 0.35) {
+          if (Math.abs(deltaX) >= pData.length * 0.70) {
             startSlideOut(activePin);
           }
         }
@@ -518,11 +598,17 @@ export default function PinGameCanvas({
         const deltaY = coords.y - dragStartPos.y;
         const isValid = (pData.pullDir === 'down' && deltaY > 0) || (pData.pullDir === 'up' && deltaY < 0);
         if (isValid) {
+          const prevStep = Math.floor(Math.abs(pData.offset || 0) / 20);
           pData.offset = deltaY;
+          const nextStep = Math.floor(Math.abs(deltaY) / 20);
+          if (nextStep !== prevStep) {
+            AudioFX.playPinRatchet();
+          }
+
           const newY = pData.origY + deltaY;
           Body.setPosition(activePin, { x: pData.origX, y: newY });
 
-          if (Math.abs(deltaY) > pData.length * 0.35) {
+          if (Math.abs(deltaY) >= pData.length * 0.70) {
             startSlideOut(activePin);
           }
         }
@@ -536,17 +622,17 @@ export default function PinGameCanvas({
       }
 
       if (!isDragging || !activePin) return;
-      const coords = getCanvasCoords(e);
       const pData = activePin.customPinData;
-      const elapsed = performance.now() - dragStartTime;
-      const dist = Math.hypot(coords.x - dragStartPos.x, coords.y - dragStartPos.y);
+      const pulledFarEnough = Math.abs(pData.offset) >= pData.length * 0.70;
 
-      const isQuickTap = dist < 18 && elapsed < 550;
-      const pulledFarEnough = Math.abs(pData.offset) >= 15;
-
-      if (isQuickTap || pulledFarEnough) {
+      if (pulledFarEnough) {
         startSlideOut(activePin);
       } else {
+        // Snap back! Stiff mechanical spring locks it back in place
+        if (Math.abs(pData.offset) > 6) {
+          AudioFX.playPinSnap();
+          spawnFloatingText('Snapped Back! 🧲', pData.origX, pData.origY - 15);
+        }
         pData.offset = 0;
         Body.setPosition(activePin, { x: pData.origX, y: pData.origY });
       }
@@ -657,10 +743,6 @@ export default function PinGameCanvas({
       ctx.clearRect(0, 0, width, height);
 
       // Draw Walls & Chambers
-      ctx.fillStyle = '#8b5a2b';
-      ctx.strokeStyle = '#5c3a1e';
-      ctx.lineWidth = 3;
-
       wallBodies.forEach((w) => {
         if (w.label === 'bowlSensor') return;
         ctx.save();
@@ -668,10 +750,112 @@ export default function PinGameCanvas({
         ctx.rotate(w.angle);
         const wWidth = w.bounds.max.x - w.bounds.min.x;
         const wHeight = w.bounds.max.y - w.bounds.min.y;
+
+        const isBouncy = w.customWallData?.isBouncy;
+        if (isBouncy) {
+          // Bouncy wall: vibrant rubber cushion look with glow
+          ctx.save();
+          ctx.shadowColor = w.customWallData.color || '#06d6a0';
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = w.customWallData.color || '#06d6a0';
+          ctx.beginPath();
+          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 8);
+          ctx.fill();
+          ctx.restore();
+
+          // Diagonal neon candy stripes
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 8);
+          ctx.clip();
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+          ctx.lineWidth = 3;
+          for (let sx = -wWidth - wHeight; sx < wWidth + wHeight; sx += 14) {
+            ctx.beginPath();
+            ctx.moveTo(sx, -wHeight / 2);
+            ctx.lineTo(sx + wHeight, wHeight / 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          ctx.strokeStyle = '#047857';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 8);
+          ctx.stroke();
+        } else {
+          // Standard wall
+          ctx.fillStyle = w.customWallData?.color || '#8b5a2b';
+          ctx.strokeStyle = '#5c3a1e';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 6);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+
+      // Draw Pinball Bumpers
+      bumperBodies.forEach((bBody) => {
+        const bmp = bBody.customBumperData;
+        if (!bmp) return;
+        ctx.save();
+        ctx.translate(bBody.position.x, bBody.position.y);
+
+        // Expanding pulse shockwave when hit
+        if (bmp.pulse > 0) {
+          ctx.save();
+          ctx.strokeStyle = bmp.color;
+          ctx.lineWidth = 3 * bmp.pulse;
+          ctx.globalAlpha = bmp.pulse;
+          ctx.beginPath();
+          ctx.arc(0, 0, bmp.radius + (1.0 - bmp.pulse) * 24, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+          bmp.pulse = Math.max(0, bmp.pulse - 0.04);
+        }
+
+        // Bumper Drop Shadow
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 3;
+        ctx.fillStyle = '#1e293b';
         ctx.beginPath();
-        ctx.roundRect(-wWidth / 2, -wHeight / 2, wWidth, wHeight, 6);
+        ctx.arc(0, 0, bmp.radius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
+
+        // Glowing outer neon rim
+        ctx.save();
+        ctx.shadowColor = bmp.color;
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = bmp.color;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, bmp.radius - 2, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
+
+        // Inner radial gradient body
+        const bGrad = ctx.createRadialGradient(-4, -4, 2, 0, 0, bmp.radius);
+        bGrad.addColorStop(0, '#ffffff');
+        bGrad.addColorStop(0.35, bmp.color);
+        bGrad.addColorStop(0.85, '#471533');
+        bGrad.addColorStop(1, '#1f0d19');
+        ctx.fillStyle = bGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, bmp.radius - 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bumper center lightning emblem
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 13px Fredoka, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚡', 0, 1);
+
         ctx.restore();
       });
 
@@ -785,8 +969,26 @@ export default function PinGameCanvas({
         const pData = pinBody.customPinData;
         if (pData.isRemoved) return;
 
+        // Check if pin is locked by another active pin
+        let isLocked = false;
+        if (pData.lockedBy) {
+          const blockingPin = pinObjects.find(
+            (p) => p.customPinData.id === pData.lockedBy && !p.customPinData.isRemoved
+          );
+          if (blockingPin) isLocked = true;
+        }
+
+        // Rattle shake animation if user tried pulling while locked
+        let shakeX = 0;
+        let shakeY = 0;
+        if (pData.rattle > 0) {
+          shakeX = (Math.random() - 0.5) * (pData.rattle * 0.45);
+          shakeY = (Math.random() - 0.5) * (pData.rattle * 0.45);
+          pData.rattle = Math.max(0, pData.rattle - 1);
+        }
+
         ctx.save();
-        ctx.translate(pinBody.position.x, pinBody.position.y);
+        ctx.translate(pinBody.position.x + shakeX, pinBody.position.y + shakeY);
 
         const isHoriz = pData.orientation === 'horizontal';
         const pW = isHoriz ? pData.length : 18;
@@ -1063,39 +1265,49 @@ export default function PinGameCanvas({
         ctx.stroke();
         ctx.restore();
 
-        // 8. Animated Pulsing Pull Direction Cue
-        const bounce = Math.sin(now * 0.008) * 3.5;
-        let cueX = ringX;
-        let cueY = ringY;
-        let arrowStr = '➔';
-        if (isHoriz) {
-          if (pData.pullDir === 'right') {
-            cueX += bounce;
-            arrowStr = '➔';
-          } else {
-            cueX -= bounce;
-            arrowStr = '⬅';
-          }
+        // 8. Animated Pulsing Pull Direction Cue OR Lock Badge
+        if (isLocked) {
+          ctx.save();
+          ctx.fillStyle = '#ef4444';
+          ctx.font = '900 15px Fredoka, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('🔒', ringX, ringY);
+          ctx.restore();
         } else {
-          if (pData.pullDir === 'down') {
-            cueY += bounce;
-            arrowStr = '⬇';
+          const bounce = Math.sin(now * 0.008) * 3.5;
+          let cueX = ringX;
+          let cueY = ringY;
+          let arrowStr = '➔';
+          if (isHoriz) {
+            if (pData.pullDir === 'right') {
+              cueX += bounce;
+              arrowStr = '➔';
+            } else {
+              cueX -= bounce;
+              arrowStr = '⬅';
+            }
           } else {
-            cueY -= bounce;
-            arrowStr = '⬆';
+            if (pData.pullDir === 'down') {
+              cueY += bounce;
+              arrowStr = '⬇';
+            } else {
+              cueY -= bounce;
+              arrowStr = '⬆';
+            }
           }
-        }
 
-        ctx.save();
-        ctx.fillStyle = '#b91c1c';
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2.5;
-        ctx.font = '900 13px Fredoka, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.strokeText(arrowStr, cueX, cueY);
-        ctx.fillText(arrowStr, cueX, cueY);
-        ctx.restore();
+          ctx.save();
+          ctx.fillStyle = '#b91c1c';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2.5;
+          ctx.font = '900 13px Fredoka, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.strokeText(arrowStr, cueX, cueY);
+          ctx.fillText(arrowStr, cueX, cueY);
+          ctx.restore();
+        }
 
         ctx.restore();
       });
@@ -1204,6 +1416,15 @@ export default function PinGameCanvas({
         spread: 70,
         origin: { y: 0.6 },
       });
+
+      // Randomly select a bonus round minigame
+      const bonusOptions = [
+        { id: 'fetch', name: 'Ball Fetch Sprint', emoji: '🎾', desc: 'Dog sprints and leaps after fast bouncing tennis balls!' },
+        { id: 'poop', name: 'Poop Patrol Scoop-a-Thon', emoji: '💩', desc: 'Scoop the backyard lawn fast before the poops explode!' },
+        { id: 'park', name: 'Lawn Mower Dash', emoji: '🚜', desc: 'Mow fresh grass patches while playful bunnies & squirrels dash by!' },
+      ];
+      const picked = bonusOptions[Math.floor(Math.random() * bonusOptions.length)];
+      setBonusRound(picked);
 
       // Dog walks towards the bowl wherever it was moved!
       setDogState('walking');
@@ -1341,6 +1562,13 @@ export default function PinGameCanvas({
 
       {/* Physics Arena Board */}
       <div className="puzzle-board-container">
+        {/* Locked Pin Alert Warning Banner */}
+        {lockedPinAlert && (
+          <div className="locked-pin-banner">
+            {lockedPinAlert}
+          </div>
+        )}
+
         {/* Poop Pause Surprise Alert (Floating in upper-mid space, never overlaps tutorial!) */}
         {poopEvent && (
           <div className="poop-alert-container">
@@ -1474,6 +1702,32 @@ export default function PinGameCanvas({
                 <span style={{ color: '#06d6a0' }}>+{(pawPrints.length) * 5} pts 🐾</span>
               </div>
             </div>
+
+            {/* Random Bonus Round Card */}
+            {bonusRound && (
+              <div className="bonus-round-card">
+                <div className="bonus-round-badge">
+                  <span>🎁</span>
+                  <span>BONUS ROUND UNLOCKED!</span>
+                </div>
+                <div className="bonus-round-title">
+                  {bonusRound.emoji} {bonusRound.name}
+                </div>
+                <div className="bonus-round-desc">
+                  {bonusRound.desc}
+                </div>
+                <button
+                  className="btn-bonus-play"
+                  onClick={() => {
+                    if (onPlayBonusRound) {
+                      onPlayBonusRound(bonusRound.id);
+                    }
+                  }}
+                >
+                  <span>🚀</span> Play Bonus Round!
+                </button>
+              </div>
+            )}
 
             <div className="victory-actions">
               <button className="btn-action btn-secondary" onClick={handleRestart}>

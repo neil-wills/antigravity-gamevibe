@@ -352,6 +352,103 @@ class SoundController {
     this.playBark(1.2);
   }
 
+  // Pin spring-back snap when released before 70% threshold
+  playPinSnap() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(480, t);
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.08);
+
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.1);
+  }
+
+  // Pin ratchet tick while dragging through teeth
+  playPinRatchet() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, t);
+    osc.frequency.exponentialRampToValueAtTime(600, t + 0.025);
+
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.035);
+  }
+
+  // Locked pin rattle when attempting to pull a dependent pin
+  playLockedRattle() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    [0, 0.06].forEach((delay) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, t + delay);
+      osc.frequency.exponentialRampToValueAtTime(90, t + delay + 0.05);
+
+      gain.gain.setValueAtTime(0.25, t + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.055);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(t + delay);
+      osc.stop(t + delay + 0.06);
+    });
+  }
+
+  // Energetic spring bounce when kibble/treat hits a bouncy bumper
+  playBumperBounce() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(260, t);
+    osc.frequency.exponentialRampToValueAtTime(680, t + 0.12);
+
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
+
   // Cute playful critter squeak / chirp when bunny hops or squirrel scampers
   playCritterSqueak() {
     if (this.muted) return;

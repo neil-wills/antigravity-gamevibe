@@ -157,6 +157,10 @@ export default function App() {
             onAddPoints={handleAddPoints}
             onAddSteps={handleAddSteps}
             onSelectLevel={(id) => setCurrentLevel(id)}
+            onPlayBonusRound={(gameId) => {
+              setActiveView(gameId);
+              setCurrentLevel((prev) => (prev < 15 ? prev + 1 : 1));
+            }}
           />
         )}
 
