@@ -539,7 +539,7 @@ export default function FetchGame({
       trail: [],
     },
     dog: {
-      x: 140,
+      x: 105,
       y: 380,
       vx: 0,
       vy: 0,
@@ -568,7 +568,7 @@ export default function FetchGame({
   });
 
   const [dogDisplay, setDogDisplay] = useState({
-    x: 140,
+    x: 105,
     y: 380,
     state: 'idle',
     flip: false,
@@ -649,7 +649,7 @@ export default function FetchGame({
       bounces: 0,
     };
     gameState.current.dog = {
-      x: 140,
+      x: 105,
       y: 380,
       vx: 0,
       vy: 0,
@@ -1142,24 +1142,37 @@ export default function FetchGame({
           drawFrisbee(ctx, gs.ball.x, gs.ball.y, 48, 18, tilt, gs.ball.spinRot);
         }
 
-        // 7. Eager Running & Leaping Dog AI (Dog chases to the Catch Zone!)
-        const dogSpeed = 9.6;
+        // 7. Eager Running & Leaping Dog AI (Dog chases after the ball across the field!)
         if (!gs.dog.holdingItem && !gs.critter) {
-          // While ball is high in flight, dog anticipates and sprints toward the projected Catch Zone!
-          // As ball descends near ground, dog zeroes directly in on the ball for interception!
-          const targetX = (gs.ball.y < gs.groundY - 80 && Math.abs(gs.ball.x - (gs.catchZoneX || 420)) > 20)
-            ? ((gs.catchZoneX || 420) * 0.72 + gs.ball.x * 0.28)
-            : gs.ball.x;
-          const dx = targetX - gs.dog.x;
+          // Dog runs in active pursuit after the flying/bouncing ball!
+          gs.dog.state = 'walking';
 
-          // Dog runs towards target
-          if (Math.abs(dx) > 8) {
+          // Emit running paw dust puffs on the lawn
+          if (gs.tick % 4 === 0) {
+            gs.critterParticles.push({
+              x: gs.dog.x - gs.dog.facing * 14,
+              y: gs.groundY - 3,
+              vx: -gs.dog.facing * (1.2 + Math.random() * 1.5),
+              vy: -Math.random() * 1.5,
+              size: 4 + Math.random() * 3,
+              life: 0.6,
+              color: 'rgba(217, 249, 157, 0.65)',
+            });
+          }
+
+          // Pursuit speed tuning:
+          // In mid-air flight, dog chases at 7.6 px/frame so the ball pulls ahead and the dog visibly runs after it!
+          // Once the ball bounces or lands on the lawn, dog accelerates into a 10.5 px/frame sprint to pounce!
+          const isBouncingOrLow = (gs.ball.bounces || 0) >= 1 || gs.ball.y >= gs.groundY - 75;
+          const dogSpeed = isBouncingOrLow ? 10.5 : 7.6;
+
+          // Dog tracks towards the ball
+          const dx = gs.ball.x - gs.dog.x;
+
+          if (Math.abs(dx) > 6) {
             gs.dog.x += Math.sign(dx) * Math.min(Math.abs(dx), dogSpeed);
             gs.dog.facing = dx > 0 ? 1 : -1;
-            gs.dog.state = 'walking';
-            if (gs.tick % 6 === 0) onAddSteps(1);
-          } else {
-            gs.dog.state = 'idle';
+            if (gs.tick % 4 === 0) onAddSteps(1);
           }
 
           // Dog vertical physics (running on ground & jumping to snatch bouncing ball!)
@@ -1172,18 +1185,21 @@ export default function FetchGame({
           }
 
           // If close horizontally and ball is bouncing high in the air, dog leaps up!
-          if (Math.abs(dx) < 55 && gs.ball.y < gs.groundY - 55 && gs.dog.y >= 375 && gs.ball.flightTicks > 15) {
+          if (Math.abs(dx) < 60 && gs.ball.y < gs.groundY - 45 && gs.dog.y >= 375 && gs.ball.flightTicks > 35) {
             gs.dog.vy = -10.5;
             AudioFX.playBark(1.2);
           }
 
-          // Catch condition: MUST have flown/bounced (prevents instant catch at launcher!)
-          const hasFlownEnough = (gs.ball.flightTicks || 0) > 18 || (gs.ball.bounces || 0) >= 1 || Math.abs(gs.ball.x - LAUNCH_X) > 75;
+          // Catch condition: MUST have genuinely chased after the ball across the field!
+          // Prevents premature catch at the launcher. The dog MUST run across the lawn!
+          const hasChasedAcrossField =
+            (gs.ball.bounces || 0) >= 1 ||
+            (gs.ball.flightTicks > 48 && gs.ball.x > LAUNCH_X + 140 && gs.ball.vy > -1);
 
           const dist = Math.hypot(gs.dog.x - gs.ball.x, (gs.dog.y - 25) - gs.ball.y);
-          const isGroundedNear = gs.ball.y >= gs.groundY - 26 && Math.abs(gs.dog.x - gs.ball.x) < 42;
+          const isGroundedNear = gs.ball.y >= gs.groundY - 28 && Math.abs(gs.dog.x - gs.ball.x) < 44;
 
-          if (hasFlownEnough && (dist < 46 || isGroundedNear)) {
+          if (hasChasedAcrossField && (dist < 46 || isGroundedNear)) {
             // CAUGHT!
             gs.dog.holdingItem = true;
             gs.ball.active = false;
@@ -1247,13 +1263,14 @@ export default function FetchGame({
       // 8. Item State 3: Held in Dog's Mouth While Trotting Back!
       if (gs.dog.holdingItem) {
         if (!gs.critter) {
-          const returnTargetX = 80;
+          const returnTargetX = 105;
           if (gs.dog.x > returnTargetX) {
-            gs.dog.x -= 5.0;
+            gs.dog.x -= 4.8;
             gs.dog.facing = -1;
-            onAddSteps(1);
+            gs.dog.state = 'walking';
+            if (gs.tick % 4 === 0) onAddSteps(1);
           } else {
-            // Returned successfully!
+            // Returned successfully to launcher!
             gs.dog.holdingItem = false;
             gs.dog.state = 'idle';
             gs.dog.facing = 1;
