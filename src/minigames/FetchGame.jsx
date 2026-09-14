@@ -111,6 +111,282 @@ function drawFrisbee(ctx, x, y, width = 48, height = 18, tiltAngle = 0, spinRot 
   ctx.restore();
 }
 
+// -------------------------------------------------------------
+// Cartoon Bunny & Squirrel Scampering Animation Helpers
+// -------------------------------------------------------------
+
+function drawCartoonBunny(ctx, x, y, facing = 1, hopPhase = 0, scale = 1.0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing * scale, scale);
+
+  // Hop vertical offset
+  const hopY = -Math.abs(Math.sin(hopPhase)) * 14;
+  ctx.translate(0, hopY);
+
+  // Ground shadow below bunny
+  const shadowScale = Math.max(0.4, 1 + hopY / 25);
+  ctx.save();
+  ctx.fillStyle = 'rgba(20, 60, 25, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, -hopY + 12, 16 * shadowScale, 4 * shadowScale, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Fluffy white cotton puff tail at rear (-16, 2)
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(-16, 2, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Bunny Body (soft creamy white egg shape)
+  const bodyGrad = ctx.createRadialGradient(-2, 0, 4, 0, 0, 18);
+  bodyGrad.addColorStop(0, '#ffffff');
+  bodyGrad.addColorStop(0.7, '#f8fafc');
+  bodyGrad.addColorStop(1, '#e2e8f0');
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.ellipse(-2, 4, 16, 12, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Paws
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(-8, 12, 6, 3.5, 0, 0, Math.PI * 2); // back paw
+  ctx.ellipse(8, 12, 6, 3.5, 0, 0, Math.PI * 2);  // front paw
+  ctx.fill();
+  ctx.stroke();
+
+  // Head (round cute sphere)
+  const headGrad = ctx.createRadialGradient(10, -8, 2, 10, -8, 14);
+  headGrad.addColorStop(0, '#ffffff');
+  headGrad.addColorStop(0.8, '#f8fafc');
+  headGrad.addColorStop(1, '#e2e8f0');
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.arc(10, -6, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Cute Long Bunny Ears (bounce with hop!)
+  const earWiggle = Math.sin(hopPhase * 2) * 0.15;
+  // Back ear
+  ctx.save();
+  ctx.translate(6, -14);
+  ctx.rotate(-0.25 + earWiggle);
+  ctx.fillStyle = '#f1f5f9';
+  ctx.beginPath();
+  ctx.ellipse(0, -12, 4.5, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#fbcfe8'; // pink inner ear
+  ctx.beginPath();
+  ctx.ellipse(0, -11, 2.2, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Front ear
+  ctx.save();
+  ctx.translate(12, -14);
+  ctx.rotate(0.1 - earWiggle);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(0, -13, 4.8, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#f472b6'; // pink inner ear
+  ctx.beginPath();
+  ctx.ellipse(0, -12, 2.5, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Big Cartoon Eye with glint
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.arc(14, -8, 3.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(15, -9, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cute Pink Button Nose
+  ctx.fillStyle = '#fb7185';
+  ctx.beginPath();
+  ctx.arc(21, -5, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Whiskers
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(18, -4);
+  ctx.lineTo(26, -6);
+  ctx.moveTo(18, -3);
+  ctx.lineTo(26, -1);
+  ctx.stroke();
+
+  // Cute rosy cheek
+  ctx.fillStyle = 'rgba(251, 113, 133, 0.4)';
+  ctx.beginPath();
+  ctx.arc(12, -3, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCartoonSquirrel(ctx, x, y, facing = 1, runPhase = 0, scale = 1.0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing * scale, scale);
+
+  // scamper bobbing
+  const bobY = Math.sin(runPhase * 2) * 3;
+  ctx.translate(0, bobY);
+
+  // Ground shadow
+  ctx.save();
+  ctx.fillStyle = 'rgba(20, 60, 25, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 12, 18, 4.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Giant Bushy Squirrel Tail (curving upwards and forwards, swishing!)
+  const tailSwish = Math.sin(runPhase * 2.5) * 0.18;
+  ctx.save();
+  ctx.translate(-14, 2);
+  ctx.rotate(tailSwish);
+
+  // Bushy tail outer gradient
+  const tailGrad = ctx.createRadialGradient(-10, -18, 5, -8, -16, 26);
+  tailGrad.addColorStop(0, '#f59e0b');
+  tailGrad.addColorStop(0.5, '#d97706');
+  tailGrad.addColorStop(1, '#92400e');
+  ctx.fillStyle = tailGrad;
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-18, -6, -26, -22, -18, -34);
+  ctx.bezierCurveTo(-12, -44, 2, -46, 6, -34);
+  ctx.bezierCurveTo(9, -24, 4, -14, 0, 0);
+  ctx.fill();
+  ctx.stroke();
+
+  // Fluffy tail texture highlights
+  ctx.strokeStyle = 'rgba(254, 243, 199, 0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(-10, -28, 8, -Math.PI * 0.5, Math.PI * 0.3);
+  ctx.stroke();
+  ctx.restore();
+
+  // Squirrel Body (warm reddish-brown / amber)
+  const bodyGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 16);
+  bodyGrad.addColorStop(0, '#f59e0b');
+  bodyGrad.addColorStop(0.8, '#d97706');
+  bodyGrad.addColorStop(1, '#b45309');
+  ctx.fillStyle = bodyGrad;
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 14, 11, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Creamy belly patch
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath();
+  ctx.ellipse(2, 4, 8, 7, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Back leg / paw
+  ctx.fillStyle = '#b45309';
+  ctx.beginPath();
+  ctx.ellipse(-6, 10, 7, 3.5, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Head (cute round face)
+  const headGrad = ctx.createRadialGradient(10, -8, 2, 10, -8, 12);
+  headGrad.addColorStop(0, '#f59e0b');
+  headGrad.addColorStop(0.8, '#d97706');
+  headGrad.addColorStop(1, '#b45309');
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.arc(11, -7, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Pointy Squirrel Ears
+  ctx.fillStyle = '#b45309';
+  ctx.beginPath();
+  ctx.moveTo(6, -14);
+  ctx.lineTo(8, -22);
+  ctx.lineTo(12, -15);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Tuft
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath();
+  ctx.moveTo(8, -15);
+  ctx.lineTo(9, -19);
+  ctx.lineTo(11, -16);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cartoon Eye with bright twinkle
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.arc(14, -8, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(15, -9, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cute Little Snout and Nose
+  ctx.fillStyle = '#451a03';
+  ctx.beginPath();
+  ctx.arc(19, -5, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Golden Acorn held in hands! 🌰
+  ctx.save();
+  ctx.translate(14, 2);
+  // Acorn cup
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath();
+  ctx.ellipse(0, -2, 4.5, 2.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Acorn nut
+  ctx.fillStyle = '#d97706';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 4, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Nut tip
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath();
+  ctx.arc(0, 6, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Tiny Front Paws holding acorn
+  ctx.fillStyle = '#d97706';
+  ctx.beginPath();
+  ctx.ellipse(12, 1, 3.5, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
 export default function FetchGame({
   selectedBreed = 'tuck',
   wardrobe = {},
@@ -161,6 +437,9 @@ export default function FetchGame({
       aimVx: 7.0,
       aimVy: -9.0,
     },
+    critter: null, // { type: 'bunny' | 'squirrel', x, y, vx, facing, phase, jumped }
+    critterCooldown: 180, // ~3s before first distraction
+    critterParticles: [], // running dust puffs
     groundY: GROUND_Y,
     width: 600,
     height: 480,
@@ -182,6 +461,49 @@ export default function FetchGame({
     const phrases = ['Fetch! 🎾', 'Woof! 🐾', 'Arf arf! 🦴', 'Throw it! ✨', 'Awoo! ❤️'];
     setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
     setTimeout(() => setBarkBubble(null), 1200);
+  };
+
+  // On-demand or automatic critter spawner (Bunny or Squirrel)
+  const spawnCritter = (preferredType = null) => {
+    const gs = gameState.current;
+    if (gameWon) return;
+
+    if (gs.critter) {
+      // If already on screen, give a speed boost & playful chirp!
+      gs.critter.vx *= 1.35;
+      AudioFX.playCritterSqueak();
+      AudioFX.playBreedBark(selectedBreed);
+      return;
+    }
+
+    const type = preferredType || (Math.random() < 0.5 ? 'squirrel' : 'bunny');
+    const fromLeft = Math.random() < 0.5;
+    const x = fromLeft ? -35 : gs.width + 35;
+    const vx = fromLeft ? 4.2 : -4.2;
+    const facing = fromLeft ? 1 : -1;
+
+    gs.critter = {
+      type,
+      x,
+      y: gs.groundY - 14,
+      vx,
+      facing,
+      phase: 0,
+      jumped: false,
+    };
+
+    AudioFX.playBreedBark(selectedBreed);
+    AudioFX.playCritterSqueak();
+
+    // Cute animated speech bubble over dog
+    if (type === 'squirrel') {
+      const phrases = ['SQUIRREL! 🐿️💨', 'Look, a squirrel! 🌰', 'Woof! SQUIRREL! 🐾', 'Get the squirrel! 🐶'];
+      setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+    } else {
+      const phrases = ['BUNNY! 🐰💨', 'Hop hop! A bunny! ✨', 'Woof! BUNNY! 🐾', 'Get the bunny! 🥕'];
+      setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+    }
+    setTimeout(() => setBarkBubble(null), 1600);
   };
 
   const handleRestart = () => {
@@ -211,6 +533,9 @@ export default function FetchGame({
       facing: 1,
       holdingItem: false,
     };
+    gameState.current.critter = null;
+    gameState.current.critterCooldown = 180;
+    gameState.current.critterParticles = [];
     gameState.current.celebrationParticles = [];
     setResetCount((c) => c + 1);
   };
@@ -270,10 +595,40 @@ export default function FetchGame({
     const gs = gameState.current;
 
     const handlePointerDown = (e) => {
-      if (gameWon || gs.ball.active || gs.dog.holdingItem) return;
+      if (gameWon) return;
       const rect = canvas.getBoundingClientRect();
       const clickX = (e.clientX - rect.left) * (width / rect.width);
       const clickY = (e.clientY - rect.top) * (height / rect.height);
+
+      // Check if clicked directly on the critter!
+      if (gs.critter) {
+        const distToCritter = Math.hypot(clickX - gs.critter.x, clickY - (gs.critter.y - 6));
+        if (distToCritter < 45) {
+          AudioFX.playCritterSqueak();
+          AudioFX.playTreatBonus();
+          for (let i = 0; i < 16; i++) {
+            const angle = (Math.PI * 2 / 16) * i;
+            gs.celebrationParticles.push({
+              x: gs.critter.x,
+              y: gs.critter.y - 12,
+              vx: Math.cos(angle) * (3.5 + Math.random() * 4),
+              vy: Math.sin(angle) * (3.5 + Math.random() * 4) - 2,
+              color: ['#ffbe0b', '#ec4899', '#00f5d4', '#a855f7'][i % 4],
+              life: 1.0,
+            });
+          }
+          onAddPoints(50);
+          setScore((s) => s + 50);
+          setBarkBubble(
+            gs.critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
+          );
+          setTimeout(() => setBarkBubble(null), 1400);
+          gs.critter.vx *= 1.6; // playful scamper escape dash!
+          return;
+        }
+      }
+
+      if (gs.ball.active || gs.dog.holdingItem) return;
 
       gs.slingshot.dragging = true;
       gs.slingshot.startX = clickX;
@@ -345,6 +700,15 @@ export default function FetchGame({
     const loop = () => {
       ctx.clearRect(0, 0, width, height);
       gs.tick++;
+
+      // Automatic random bunny / squirrel distraction spawner
+      if (!gs.critter && !gameWon) {
+        gs.critterCooldown--;
+        if (gs.critterCooldown <= 0) {
+          spawnCritter();
+          gs.critterCooldown = 750 + Math.floor(Math.random() * 400); // 12-19s
+        }
+      }
 
       // 1. Sky & Sun Atmosphere
       const skyGrad = ctx.createLinearGradient(0, 0, 0, gs.groundY);
@@ -590,9 +954,9 @@ export default function FetchGame({
           drawFrisbee(ctx, gs.ball.x, gs.ball.y, 48, 18, tilt, gs.ball.spinRot);
         }
 
-        // 7. Anticipatory Smart Dog AI (Fast & Easy to Catch!)
+        // 7. Anticipatory Smart Dog AI (Fetch pursuit when NOT distracted by critter)
         const dogSpeed = 8.5; // Fast enough to easily intercept!
-        if (!gs.dog.holdingItem) {
+        if (!gs.dog.holdingItem && !gs.critter) {
           // Dog runs towards the ball
           if (gs.dog.x < gs.ball.x - 10) {
             gs.dog.x += dogSpeed;
@@ -657,17 +1021,19 @@ export default function FetchGame({
 
       // 8. Item State 3: Held in Dog's Mouth While Trotting Back!
       if (gs.dog.holdingItem) {
-        const returnTargetX = 80;
-        if (gs.dog.x > returnTargetX) {
-          gs.dog.x -= 5.0;
-          gs.dog.facing = -1;
-          onAddSteps(1);
-        } else {
-          // Returned successfully!
-          gs.dog.holdingItem = false;
-          gs.dog.state = 'idle';
-          gs.dog.facing = 1;
-          setIsThrowActive(false);
+        if (!gs.critter) {
+          const returnTargetX = 80;
+          if (gs.dog.x > returnTargetX) {
+            gs.dog.x -= 5.0;
+            gs.dog.facing = -1;
+            onAddSteps(1);
+          } else {
+            // Returned successfully!
+            gs.dog.holdingItem = false;
+            gs.dog.state = 'idle';
+            gs.dog.facing = 1;
+            setIsThrowActive(false);
+          }
         }
 
         // Draw the item visibly in the dog's mouth!
@@ -683,6 +1049,104 @@ export default function FetchGame({
         ctx.fillStyle = '#ffbe0b';
         ctx.font = 'bold 16px sans-serif';
         ctx.fillText('✨', gs.dog.x, mouthY - 24);
+      }
+
+      // 9. Scampering Cartoon Bunny or Squirrel & Dog Distraction Chase!
+      if (gs.critter) {
+        // Move critter across the lawn
+        gs.critter.x += gs.critter.vx;
+        gs.critter.phase += 0.24;
+
+        // Ground dust puffs as critter scampers
+        if (gs.tick % 4 === 0) {
+          gs.critterParticles.push({
+            x: gs.critter.x - gs.critter.facing * 10,
+            y: gs.groundY - 4,
+            vx: -gs.critter.facing * (0.6 + Math.random() * 0.8),
+            vy: -0.4 - Math.random() * 0.7,
+            color: 'rgba(215, 235, 180, 0.75)',
+            size: 3.5 + Math.random() * 2.5,
+            life: 0.6,
+          });
+        }
+
+        // Render the cartoon animal
+        if (gs.critter.type === 'bunny') {
+          drawCartoonBunny(ctx, gs.critter.x, gs.critter.y, gs.critter.facing, gs.critter.phase);
+        } else {
+          drawCartoonSquirrel(ctx, gs.critter.x, gs.critter.y, gs.critter.facing, gs.critter.phase);
+        }
+
+        // Dog playfully chases the animal across the grass!
+        if (!gameWon) {
+          const dogChaseSpeed = 7.8;
+          if (gs.dog.x < gs.critter.x - 20) {
+            gs.dog.x += dogChaseSpeed;
+            gs.dog.facing = 1;
+            gs.dog.state = 'walking';
+            onAddSteps(1);
+          } else if (gs.dog.x > gs.critter.x + 20) {
+            gs.dog.x -= dogChaseSpeed;
+            gs.dog.facing = -1;
+            gs.dog.state = 'walking';
+            onAddSteps(1);
+          }
+
+          // Close encounter: playful leap and bonus!
+          const distToDog = Math.hypot(gs.dog.x - gs.critter.x, (gs.dog.y - 20) - gs.critter.y);
+          if (distToDog < 55 && !gs.critter.jumped) {
+            gs.critter.jumped = true;
+            gs.critter.vx *= 1.45; // Startled scamper burst!
+            AudioFX.playCritterSqueak();
+            AudioFX.playTreatBonus();
+
+            for (let i = 0; i < 14; i++) {
+              const angle = (Math.PI * 2 / 14) * i;
+              gs.celebrationParticles.push({
+                x: gs.critter.x,
+                y: gs.critter.y - 14,
+                vx: Math.cos(angle) * (3 + Math.random() * 3),
+                vy: Math.sin(angle) * (3 + Math.random() * 3) - 2,
+                color: ['#ffbe0b', '#ff006e', '#00f5d4', '#a855f7'][i % 4],
+                life: 1.0,
+              });
+            }
+
+            onAddPoints(25);
+            setScore((s) => s + 25);
+            setBarkBubble('Almost got it! 🐾✨');
+            setTimeout(() => setBarkBubble(null), 1400);
+          }
+        }
+
+        // Off-screen check
+        if (gs.critter.x < -70 || gs.critter.x > width + 70) {
+          gs.critter = null;
+          gs.critterCooldown = 750 + Math.floor(Math.random() * 400);
+          if (!gs.ball.active && !gs.dog.holdingItem) {
+            setBarkBubble("Where'd it go?! 🐶🐾");
+            setTimeout(() => setBarkBubble(null), 1200);
+            gs.dog.state = 'idle';
+          }
+        }
+      }
+
+      // Render Critter Dust Puffs
+      for (let i = gs.critterParticles.length - 1; i >= 0; i--) {
+        const cp = gs.critterParticles[i];
+        cp.x += cp.vx;
+        cp.y += cp.vy;
+        cp.life -= 0.04;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, cp.life);
+        ctx.fillStyle = cp.color;
+        ctx.beginPath();
+        ctx.arc(cp.x, cp.y, cp.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        if (cp.life <= 0) {
+          gs.critterParticles.splice(i, 1);
+        }
       }
 
       // 9. Render Celebration Particles
@@ -859,6 +1323,15 @@ export default function FetchGame({
         >
           <span>⭐ Mega Launch</span>
           <span className="throw-desc">High Float</span>
+        </button>
+        <button
+          className="btn-quick-throw btn-throw-critter"
+          onClick={() => spawnCritter()}
+          disabled={gameWon}
+          title="Send a cute bunny or squirrel across the grass to distract your pup!"
+        >
+          <span>🐿️ Distract Pup!</span>
+          <span className="throw-desc">Bunny / Squirrel Chase</span>
         </button>
       </div>
     </div>

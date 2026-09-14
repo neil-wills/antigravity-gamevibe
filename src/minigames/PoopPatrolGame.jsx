@@ -4,6 +4,282 @@ import DogRenderer from '../components/DogRenderer';
 import { AudioFX } from '../game/AudioController';
 import '../styles/minigames.css';
 
+// -------------------------------------------------------------
+// Cartoon Bunny & Squirrel Scampering Animation Helpers
+// -------------------------------------------------------------
+
+function drawCartoonBunny(ctx, x, y, facing = 1, hopPhase = 0, scale = 1.0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing * scale, scale);
+
+  // Hop vertical offset
+  const hopY = -Math.abs(Math.sin(hopPhase)) * 14;
+  ctx.translate(0, hopY);
+
+  // Ground shadow below bunny
+  const shadowScale = Math.max(0.4, 1 + hopY / 25);
+  ctx.save();
+  ctx.fillStyle = 'rgba(20, 60, 25, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, -hopY + 12, 16 * shadowScale, 4 * shadowScale, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Fluffy white cotton puff tail at rear (-16, 2)
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(-16, 2, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Bunny Body (soft creamy white egg shape)
+  const bodyGrad = ctx.createRadialGradient(-2, 0, 4, 0, 0, 18);
+  bodyGrad.addColorStop(0, '#ffffff');
+  bodyGrad.addColorStop(0.7, '#f8fafc');
+  bodyGrad.addColorStop(1, '#e2e8f0');
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.ellipse(-2, 4, 16, 12, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Paws
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(-8, 12, 6, 3.5, 0, 0, Math.PI * 2); // back paw
+  ctx.ellipse(8, 12, 6, 3.5, 0, 0, Math.PI * 2);  // front paw
+  ctx.fill();
+  ctx.stroke();
+
+  // Head (round cute sphere)
+  const headGrad = ctx.createRadialGradient(10, -8, 2, 10, -8, 14);
+  headGrad.addColorStop(0, '#ffffff');
+  headGrad.addColorStop(0.8, '#f8fafc');
+  headGrad.addColorStop(1, '#e2e8f0');
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.arc(10, -6, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Cute Long Bunny Ears (bounce with hop!)
+  const earWiggle = Math.sin(hopPhase * 2) * 0.15;
+  // Back ear
+  ctx.save();
+  ctx.translate(6, -14);
+  ctx.rotate(-0.25 + earWiggle);
+  ctx.fillStyle = '#f1f5f9';
+  ctx.beginPath();
+  ctx.ellipse(0, -12, 4.5, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#fbcfe8'; // pink inner ear
+  ctx.beginPath();
+  ctx.ellipse(0, -11, 2.2, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Front ear
+  ctx.save();
+  ctx.translate(12, -14);
+  ctx.rotate(0.1 - earWiggle);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(0, -13, 4.8, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#f472b6'; // pink inner ear
+  ctx.beginPath();
+  ctx.ellipse(0, -12, 2.5, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Big Cartoon Eye with glint
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.arc(14, -8, 3.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(15, -9, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cute Pink Button Nose
+  ctx.fillStyle = '#fb7185';
+  ctx.beginPath();
+  ctx.arc(21, -5, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Whiskers
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(18, -4);
+  ctx.lineTo(26, -6);
+  ctx.moveTo(18, -3);
+  ctx.lineTo(26, -1);
+  ctx.stroke();
+
+  // Cute rosy cheek
+  ctx.fillStyle = 'rgba(251, 113, 133, 0.4)';
+  ctx.beginPath();
+  ctx.arc(12, -3, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCartoonSquirrel(ctx, x, y, facing = 1, runPhase = 0, scale = 1.0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing * scale, scale);
+
+  // scamper bobbing
+  const bobY = Math.sin(runPhase * 2) * 3;
+  ctx.translate(0, bobY);
+
+  // Ground shadow
+  ctx.save();
+  ctx.fillStyle = 'rgba(20, 60, 25, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 12, 18, 4.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Giant Bushy Squirrel Tail (curving upwards and forwards, swishing!)
+  const tailSwish = Math.sin(runPhase * 2.5) * 0.18;
+  ctx.save();
+  ctx.translate(-14, 2);
+  ctx.rotate(tailSwish);
+
+  // Bushy tail outer gradient
+  const tailGrad = ctx.createRadialGradient(-10, -18, 5, -8, -16, 26);
+  tailGrad.addColorStop(0, '#f59e0b');
+  tailGrad.addColorStop(0.5, '#d97706');
+  tailGrad.addColorStop(1, '#92400e');
+  ctx.fillStyle = tailGrad;
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-18, -6, -26, -22, -18, -34);
+  ctx.bezierCurveTo(-12, -44, 2, -46, 6, -34);
+  ctx.bezierCurveTo(9, -24, 4, -14, 0, 0);
+  ctx.fill();
+  ctx.stroke();
+
+  // Fluffy tail texture highlights
+  ctx.strokeStyle = 'rgba(254, 243, 199, 0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(-10, -28, 8, -Math.PI * 0.5, Math.PI * 0.3);
+  ctx.stroke();
+  ctx.restore();
+
+  // Squirrel Body (warm reddish-brown / amber)
+  const bodyGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 16);
+  bodyGrad.addColorStop(0, '#f59e0b');
+  bodyGrad.addColorStop(0.8, '#d97706');
+  bodyGrad.addColorStop(1, '#b45309');
+  ctx.fillStyle = bodyGrad;
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 14, 11, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Creamy belly patch
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath();
+  ctx.ellipse(2, 4, 8, 7, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Back leg / paw
+  ctx.fillStyle = '#b45309';
+  ctx.beginPath();
+  ctx.ellipse(-6, 10, 7, 3.5, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Head (cute round face)
+  const headGrad = ctx.createRadialGradient(10, -8, 2, 10, -8, 12);
+  headGrad.addColorStop(0, '#f59e0b');
+  headGrad.addColorStop(0.8, '#d97706');
+  headGrad.addColorStop(1, '#b45309');
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.arc(11, -7, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Pointy Squirrel Ears
+  ctx.fillStyle = '#b45309';
+  ctx.beginPath();
+  ctx.moveTo(6, -14);
+  ctx.lineTo(8, -22);
+  ctx.lineTo(12, -15);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Tuft
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath();
+  ctx.moveTo(8, -15);
+  ctx.lineTo(9, -19);
+  ctx.lineTo(11, -16);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cartoon Eye with bright twinkle
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.arc(14, -8, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(15, -9, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cute Little Snout and Nose
+  ctx.fillStyle = '#451a03';
+  ctx.beginPath();
+  ctx.arc(19, -5, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Golden Acorn held in hands! 🌰
+  ctx.save();
+  ctx.translate(14, 2);
+  // Acorn cup
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath();
+  ctx.ellipse(0, -2, 4.5, 2.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Acorn nut
+  ctx.fillStyle = '#d97706';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 4, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Nut tip
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath();
+  ctx.arc(0, 6, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Tiny Front Paws holding acorn
+  ctx.fillStyle = '#d97706';
+  ctx.beginPath();
+  ctx.ellipse(12, 1, 3.5, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
 export default function PoopPatrolGame({
   selectedBreed = 'tuck',
   wardrobe = {},
@@ -19,6 +295,12 @@ export default function PoopPatrolGame({
   const [gameResetCount, setGameResetCount] = useState(0);
   const [barkBubble, setBarkBubble] = useState(null);
   const [showDpad, setShowDpad] = useState(false);
+  const [dogPos, setDogPos] = useState({ x: 535, y: 410, state: 'idle', flip: true });
+
+  const critterState = useRef({
+    critter: null,
+    timer: 180, // ~3s before first spontaneous critter distraction
+  });
 
   const handleDogBark = (e) => {
     if (e) e.stopPropagation();
@@ -26,6 +308,48 @@ export default function PoopPatrolGame({
     const phrases = ['Good job! 🐾', 'Woof! 🚜', 'Clean lawn! 🌻', 'Ruff! ✨', 'Yip! 🐶'];
     setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
     setTimeout(() => setBarkBubble(null), 1200);
+  };
+
+  // On-demand or automatic critter spawner for the garden
+  const spawnCritter = (preferredType = null) => {
+    const cs = critterState.current;
+    if (gameWon) return;
+
+    if (cs.critter) {
+      cs.critter.vx *= 1.35;
+      AudioFX.playCritterSqueak();
+      AudioFX.playBreedBark(selectedBreed);
+      return;
+    }
+
+    const type = preferredType || (Math.random() < 0.5 ? 'squirrel' : 'bunny');
+    const fromLeft = Math.random() < 0.5;
+    const x = fromLeft ? -35 : 635;
+    const y = Math.random() * 220 + 90;
+    const vx = fromLeft ? 3.6 : -3.6;
+    const facing = fromLeft ? 1 : -1;
+
+    cs.critter = {
+      type,
+      x,
+      y,
+      vx,
+      facing,
+      phase: 0,
+      jumped: false,
+    };
+
+    AudioFX.playBreedBark(selectedBreed);
+    AudioFX.playCritterSqueak();
+
+    if (type === 'squirrel') {
+      const phrases = ['SQUIRREL! 🐿️💨', 'Look, a squirrel! 🌰', 'Woof! SQUIRREL! 🐾', 'Get the squirrel! 🐶'];
+      setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+    } else {
+      const phrases = ['BUNNY! 🐰💨', 'Hop hop! A bunny! ✨', 'Woof! BUNNY! 🐾', 'Get the bunny! 🥕'];
+      setBarkBubble(phrases[Math.floor(Math.random() * phrases.length)]);
+    }
+    setTimeout(() => setBarkBubble(null), 1600);
   };
 
   const TOTAL_GOAL_POOPS = 10;
@@ -63,6 +387,9 @@ export default function PoopPatrolGame({
     setGrassMowedPct(0);
     setGameWon(false);
     mowerState.current.target = null;
+    critterState.current.critter = null;
+    critterState.current.timer = 180;
+    setDogPos({ x: 535, y: 410, state: 'idle', flip: true });
     setGameResetCount((c) => c + 1);
   };
 
@@ -137,10 +464,29 @@ export default function PoopPatrolGame({
 
       const handlePointerDown = (e) => {
         if (gameWon) return;
-        isPointerDown = true;
         const rect = canvas.getBoundingClientRect();
         const clickX = (e.clientX - rect.left) * (width / rect.width);
         const clickY = (e.clientY - rect.top) * (height / rect.height);
+
+        // Check if clicked directly on the critter!
+        const cs = critterState.current;
+        if (cs.critter) {
+          const cDist = Math.hypot(clickX - cs.critter.x, clickY - cs.critter.y);
+          if (cDist < 42) {
+            AudioFX.playCritterSqueak();
+            AudioFX.playTreatBonus();
+            onAddPoints(50);
+            setScore((s) => s + 50);
+            setBarkBubble(
+              cs.critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
+            );
+            setTimeout(() => setBarkBubble(null), 1400);
+            cs.critter.vx *= 1.6;
+            return;
+          }
+        }
+
+        isPointerDown = true;
         ms.target = { x: clickX, y: clickY };
       };
 
@@ -431,6 +777,69 @@ export default function PoopPatrolGame({
 
         ctx.restore();
 
+        // Scampering Critter (Bunny or Squirrel) in Garden
+        const cs = critterState.current;
+        if (!cs.critter && !gameWon) {
+          cs.timer--;
+          if (cs.timer <= 0) {
+            spawnCritter();
+            cs.timer = 800 + Math.floor(Math.random() * 400); // 13-20s
+          }
+        }
+
+        if (cs.critter) {
+          cs.critter.x += cs.critter.vx;
+          cs.critter.phase += 0.22;
+
+          if (cs.critter.type === 'bunny') {
+            drawCartoonBunny(ctx, cs.critter.x, cs.critter.y, cs.critter.facing, cs.critter.phase, 0.85);
+          } else {
+            drawCartoonSquirrel(ctx, cs.critter.x, cs.critter.y, cs.critter.facing, cs.critter.phase, 0.85);
+          }
+
+          // Lawnmower proximity reaction (critter startled hop)
+          const mDist = Math.hypot(ms.x - cs.critter.x, ms.y - cs.critter.y);
+          if (mDist < 60 && !cs.critter.mowerFright) {
+            cs.critter.mowerFright = true;
+            cs.critter.vx *= 1.4;
+            AudioFX.playCritterSqueak();
+          }
+
+          // Dog spectator runs out across the garden to playfully chase the animal!
+          if (!gameWon) {
+            setDogPos((prev) => {
+              const dx = cs.critter.x - prev.x;
+              const dy = cs.critter.y - prev.y;
+              const dist = Math.hypot(dx, dy);
+
+              if (dist < 50 && !cs.critter.dogBonus) {
+                cs.critter.dogBonus = true;
+                cs.critter.vx *= 1.35;
+                AudioFX.playTreatBonus();
+                onAddPoints(25);
+                setScore((s) => s + 25);
+                setBarkBubble('Almost got it! 🐶✨');
+                setTimeout(() => setBarkBubble(null), 1200);
+              }
+
+              const spd = 4.8;
+              return {
+                x: prev.x + (Math.abs(dx) > 12 ? Math.sign(dx) * spd : 0),
+                y: prev.y + (Math.abs(dy) > 12 ? Math.sign(dy) * spd * 0.75 : 0),
+                state: 'walking',
+                flip: dx < 0,
+              };
+            });
+          }
+
+          // Off-screen check
+          if (cs.critter.x < -60 || cs.critter.x > width + 60) {
+            cs.critter = null;
+            cs.timer = 800 + Math.floor(Math.random() * 400);
+            setDogPos({ x: 535, y: 410, state: 'idle', flip: true });
+          }
+        }
+
         animId = requestAnimationFrame(mowerLoop);
       };
 
@@ -468,6 +877,24 @@ export default function PoopPatrolGame({
         const rect = canvas.getBoundingClientRect();
         const clickX = (e.clientX - rect.left) * (width / rect.width);
         const clickY = (e.clientY - rect.top) * (height / rect.height);
+
+        // Check if clicked directly on the critter!
+        const cs = critterState.current;
+        if (cs.critter) {
+          const cDist = Math.hypot(clickX - cs.critter.x, clickY - cs.critter.y);
+          if (cDist < 42) {
+            AudioFX.playCritterSqueak();
+            AudioFX.playTreatBonus();
+            onAddPoints(50);
+            setScore((s) => s + 50);
+            setBarkBubble(
+              cs.critter.type === 'squirrel' ? 'Found Squirrel! 🐿️⭐' : 'Pet Bunny! 🐰⭐'
+            );
+            setTimeout(() => setBarkBubble(null), 1400);
+            cs.critter.vx *= 1.6;
+            return;
+          }
+        }
 
         for (let i = ss.poops.length - 1; i >= 0; i--) {
           const p = ss.poops[i];
@@ -531,6 +958,61 @@ export default function PoopPatrolGame({
           ctx.arc(flyX, flyY, 2.5, 0, Math.PI * 2);
           ctx.fill();
         });
+
+        // Scampering Critter (Bunny or Squirrel) in Garden
+        const cs = critterState.current;
+        if (!cs.critter && !gameWon) {
+          cs.timer--;
+          if (cs.timer <= 0) {
+            spawnCritter();
+            cs.timer = 800 + Math.floor(Math.random() * 400); // 13-20s
+          }
+        }
+
+        if (cs.critter) {
+          cs.critter.x += cs.critter.vx;
+          cs.critter.phase += 0.22;
+
+          if (cs.critter.type === 'bunny') {
+            drawCartoonBunny(ctx, cs.critter.x, cs.critter.y, cs.critter.facing, cs.critter.phase, 0.85);
+          } else {
+            drawCartoonSquirrel(ctx, cs.critter.x, cs.critter.y, cs.critter.facing, cs.critter.phase, 0.85);
+          }
+
+          // Dog spectator runs out across the garden to playfully chase the animal!
+          if (!gameWon) {
+            setDogPos((prev) => {
+              const dx = cs.critter.x - prev.x;
+              const dy = cs.critter.y - prev.y;
+              const dist = Math.hypot(dx, dy);
+
+              if (dist < 50 && !cs.critter.dogBonus) {
+                cs.critter.dogBonus = true;
+                cs.critter.vx *= 1.35;
+                AudioFX.playTreatBonus();
+                onAddPoints(25);
+                setScore((s) => s + 25);
+                setBarkBubble('Almost got it! 🐶✨');
+                setTimeout(() => setBarkBubble(null), 1200);
+              }
+
+              const spd = 4.8;
+              return {
+                x: prev.x + (Math.abs(dx) > 12 ? Math.sign(dx) * spd : 0),
+                y: prev.y + (Math.abs(dy) > 12 ? Math.sign(dy) * spd * 0.75 : 0),
+                state: 'walking',
+                flip: dx < 0,
+              };
+            });
+          }
+
+          // Off-screen check
+          if (cs.critter.x < -60 || cs.critter.x > width + 60) {
+            cs.critter = null;
+            cs.timer = 800 + Math.floor(Math.random() * 400);
+            setDogPos({ x: 535, y: 410, state: 'idle', flip: true });
+          }
+        }
 
         animId = requestAnimationFrame(scooperLoop);
       };
@@ -613,15 +1095,16 @@ export default function PoopPatrolGame({
           style={{ cursor: mode === 'mower' ? 'crosshair' : 'pointer' }}
         />
 
-        {/* Dog spectator in garden corner - Click to Bark! */}
+        {/* Dog in garden - Click to Bark or Pet! Runs across grass when critter appears */}
         <div
           className="dog-interactive"
           onClick={handleDogBark}
           style={{
             position: 'absolute',
-            right: 12,
-            bottom: 12,
+            left: dogPos.x - 45,
+            top: dogPos.y - 45,
             zIndex: 15,
+            transition: 'left 0.06s linear, top 0.06s linear',
           }}
           title="Click to hear your pup cheer & bark! 🐶"
         >
@@ -635,8 +1118,8 @@ export default function PoopPatrolGame({
           <DogRenderer
             breedId={selectedBreed}
             wardrobe={wardrobe}
-            state={barkBubble ? 'barking' : gameWon ? 'eating' : 'idle'}
-            flip={true}
+            state={barkBubble ? 'barking' : gameWon ? 'eating' : dogPos.state}
+            flip={dogPos.flip}
             size={90}
           />
         </div>
@@ -683,6 +1166,15 @@ export default function PoopPatrolGame({
             ? '🚜 Click or drag grass to drive mower • Arrow Keys / WASD also work!'
             : '🧹 Tap poops to scoop them up!'}
         </div>
+
+        <button
+          className="btn-dpad-toggle"
+          onClick={() => spawnCritter()}
+          disabled={gameWon}
+          title="Distract pup with a scampering bunny or squirrel!"
+        >
+          🐿️ Distract Pup
+        </button>
 
         {mode === 'mower' && !gameWon && (
           <button

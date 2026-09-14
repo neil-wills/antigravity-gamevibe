@@ -323,6 +323,32 @@ class SoundController {
     this.playBark(1.2);
   }
 
+  // Cute playful critter squeak / chirp when bunny hops or squirrel scampers
+  playCritterSqueak() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1400, t);
+    osc.frequency.linearRampToValueAtTime(1850, t + 0.05);
+    osc.frequency.linearRampToValueAtTime(1200, t + 0.11);
+
+    gain.gain.setValueAtTime(0.01, t);
+    gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.14);
+  }
+
   // Start lawn mower engine hum
   startMower() {
     if (this.muted || this.mowerOsc) return;
