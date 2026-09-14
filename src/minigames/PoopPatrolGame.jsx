@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import confetti from 'canvas-confetti';
 import DogRenderer from '../components/DogRenderer';
 import { AudioFX } from '../game/AudioController';
 import '../styles/minigames.css';
@@ -14,7 +15,10 @@ export default function PoopPatrolGame({
   const [score, setScore] = useState(0);
   const [poopsCleared, setPoopsCleared] = useState(0);
   const [grassMowedPct, setGrassMowedPct] = useState(0);
+  const [gameWon, setGameWon] = useState(false);
+  const [gameResetCount, setGameResetCount] = useState(0);
 
+  const TOTAL_GOAL_POOPS = 10;
   const canvasRef = useRef(null);
 
   // Mower game state
@@ -26,6 +30,8 @@ export default function PoopPatrolGame({
     turn: 0,
     poops: [],
     grassGrid: [],
+    explosions: [],
+    splats: [],
     gridCols: 20,
     gridRows: 16,
     activeKeys: {},
@@ -34,8 +40,26 @@ export default function PoopPatrolGame({
   // Scooper game state
   const scooperState = useRef({
     poops: [],
-    spawnTimer: null,
+    explosions: [],
+    splats: [],
   });
+
+  // Restart / Reset game
+  const handleRestartGame = () => {
+    AudioFX.playPinSlide();
+    setScore(0);
+    setPoopsCleared(0);
+    setGrassMowedPct(0);
+    setGameWon(false);
+    setGameResetCount((c) => c + 1);
+  };
+
+  // Exit / Cancel Handler
+  const handleCancelExit = () => {
+    AudioFX.stopMower();
+    AudioFX.playPinSlide();
+    onBack();
+  };
 
   // Initialize or Switch Modes
   useEffect(() => {
@@ -58,6 +82,8 @@ export default function PoopPatrolGame({
       ms.y = 240;
       ms.angle = 0;
       ms.speed = 0;
+      ms.explosions = [];
+      ms.splats = [];
       ms.grassGrid = [];
       for (let r = 0; r < ms.gridRows; r++) {
         for (let c = 0; c < ms.gridCols; c++) {
@@ -73,13 +99,13 @@ export default function PoopPatrolGame({
         }
       }
 
-      // Spawn initial poops in garden
+      // Spawn initial 10 poops in garden
       ms.poops = [];
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < TOTAL_GOAL_POOPS; i++) {
         ms.poops.push({
           id: i,
-          x: Math.random() * (width - 80) + 40,
-          y: Math.random() * (height - 80) + 40,
+          x: Math.random() * (width - 100) + 50,
+          y: Math.random() * (height - 100) + 50,
           cleared: false,
         });
       }
@@ -98,22 +124,24 @@ export default function PoopPatrolGame({
       const mowerLoop = () => {
         ctx.clearRect(0, 0, width, height);
 
-        // Control handling
-        const keys = ms.activeKeys;
-        const maxSpeed = 3.6;
-        if (keys['arrowup'] || keys['w']) ms.speed = Math.min(ms.speed + 0.2, maxSpeed);
-        else if (keys['arrowdown'] || keys['s']) ms.speed = Math.max(ms.speed - 0.2, -maxSpeed * 0.6);
-        else ms.speed *= 0.92;
+        // Control handling if game not won
+        if (!gameWon) {
+          const keys = ms.activeKeys;
+          const maxSpeed = 3.6;
+          if (keys['arrowup'] || keys['w']) ms.speed = Math.min(ms.speed + 0.2, maxSpeed);
+          else if (keys['arrowdown'] || keys['s']) ms.speed = Math.max(ms.speed - 0.2, -maxSpeed * 0.6);
+          else ms.speed *= 0.92;
 
-        if (keys['arrowleft'] || keys['a']) ms.angle -= 0.055;
-        if (keys['arrowright'] || keys['d']) ms.angle += 0.055;
+          if (keys['arrowleft'] || keys['a']) ms.angle -= 0.055;
+          if (keys['arrowright'] || keys['d']) ms.angle += 0.055;
 
-        ms.x += Math.cos(ms.angle) * ms.speed;
-        ms.y += Math.sin(ms.angle) * ms.speed;
+          ms.x += Math.cos(ms.angle) * ms.speed;
+          ms.y += Math.sin(ms.angle) * ms.speed;
 
-        // Boundaries
-        ms.x = Math.max(25, Math.min(width - 25, ms.x));
-        ms.y = Math.max(25, Math.min(height - 25, ms.y));
+          // Boundaries
+          ms.x = Math.max(25, Math.min(width - 25, ms.x));
+          ms.y = Math.max(25, Math.min(height - 25, ms.y));
+        }
 
         // Draw Grass Grid (Tall lush grass vs Neat cut stripes)
         let mowedCount = 0;
@@ -151,12 +179,53 @@ export default function PoopPatrolGame({
           if (p.cleared) return;
           // Mower vacuum collision
           const pDist = Math.hypot(p.x - ms.x, p.y - ms.y);
-          if (pDist < 28) {
+          if (pDist < 28 && !gameWon) {
             p.cleared = true;
-            AudioFX.playScoop();
+
+            // 💥 HILARIOUS POOP EXPLOSION EFFECT!
+            AudioFX.playPoopExplosion();
+            for (let k = 0; k < 18; k++) {
+              const ang = (Math.PI * 2 * k) / 18 + Math.random() * 0.4;
+              const spd = Math.random() * 5 + 2.5;
+              ms.explosions.push({
+                x: p.x,
+                y: p.y,
+                vx: Math.cos(ang) * spd,
+                vy: Math.sin(ang) * spd,
+                size: Math.random() * 7 + 4,
+                color: ['#7f4f24', '#58311e', '#a66a38', '#f59e0b', '#84cc16', '#22c55e'][
+                  Math.floor(Math.random() * 6)
+                ],
+                life: 1.0,
+                decay: Math.random() * 0.04 + 0.025,
+              });
+            }
+
+            // Comic text badge
+            ms.splats.push({
+              x: p.x,
+              y: p.y - 12,
+              text: '💥 SPLAT!',
+              life: 1.0,
+            });
+
             onAddPoints(50);
             setScore((s) => s + 50);
-            setPoopsCleared((c) => c + 1);
+            setPoopsCleared((prevCleared) => {
+              const next = prevCleared + 1;
+              if (next >= TOTAL_GOAL_POOPS) {
+                // GOAL ACCOMPLISHED! End bonus game
+                setGameWon(true);
+                AudioFX.stopMower();
+                AudioFX.playWinFanfare();
+                confetti({
+                  particleCount: 80,
+                  spread: 75,
+                  origin: { y: 0.6 },
+                });
+              }
+              return next;
+            });
           } else {
             // Draw Poop Emoji
             ctx.font = '22px sans-serif';
@@ -165,6 +234,46 @@ export default function PoopPatrolGame({
             ctx.fillText('💩', p.x, p.y);
           }
         });
+
+        // Update & Render Explosion Particles
+        for (let i = ms.explosions.length - 1; i >= 0; i--) {
+          const ep = ms.explosions[i];
+          ep.x += ep.vx;
+          ep.y += ep.vy;
+          ep.life -= ep.decay;
+          if (ep.life <= 0) {
+            ms.explosions.splice(i, 1);
+          } else {
+            ctx.save();
+            ctx.globalAlpha = ep.life;
+            ctx.fillStyle = ep.color;
+            ctx.beginPath();
+            ctx.arc(ep.x, ep.y, ep.size * ep.life, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        // Render Splat Comic Badges
+        for (let i = ms.splats.length - 1; i >= 0; i--) {
+          const sp = ms.splats[i];
+          sp.y -= 0.7;
+          sp.life -= 0.03;
+          if (sp.life <= 0) {
+            ms.splats.splice(i, 1);
+          } else {
+            ctx.save();
+            ctx.globalAlpha = sp.life;
+            ctx.font = 'bold 16px Fredoka, sans-serif';
+            ctx.fillStyle = '#ffbe0b';
+            ctx.strokeStyle = '#7f4f24';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+            ctx.strokeText(sp.text, sp.x, sp.y);
+            ctx.fillText(sp.text, sp.x, sp.y);
+            ctx.restore();
+          }
+        }
 
         // Draw Ride-Along Lawn Mower
         ctx.save();
@@ -225,9 +334,11 @@ export default function PoopPatrolGame({
       AudioFX.stopMower();
       const ss = scooperState.current;
       ss.poops = [];
+      ss.explosions = [];
+      ss.splats = [];
 
       // Spawn initial poops
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < TOTAL_GOAL_POOPS; i++) {
         ss.poops.push({
           id: i,
           x: Math.random() * (width - 100) + 50,
@@ -237,6 +348,7 @@ export default function PoopPatrolGame({
       }
 
       const handleCanvasClick = (e) => {
+        if (gameWon) return;
         const rect = canvas.getBoundingClientRect();
         const clickX = (e.clientX - rect.left) * (width / rect.width);
         const clickY = (e.clientY - rect.top) * (height / rect.height);
@@ -250,17 +362,19 @@ export default function PoopPatrolGame({
             AudioFX.playScoop();
             onAddPoints(30);
             setScore((s) => s + 30);
-            setPoopsCleared((c) => c + 1);
-
-            // Spawn replacement after short delay
-            setTimeout(() => {
-              ss.poops.push({
-                id: Date.now() + Math.random(),
-                x: Math.random() * (width - 100) + 50,
-                y: Math.random() * (height - 100) + 50,
-                scale: 1,
-              });
-            }, 1200);
+            setPoopsCleared((prevCleared) => {
+              const next = prevCleared + 1;
+              if (next >= TOTAL_GOAL_POOPS) {
+                setGameWon(true);
+                AudioFX.playWinFanfare();
+                confetti({
+                  particleCount: 80,
+                  spread: 75,
+                  origin: { y: 0.6 },
+                });
+              }
+              return next;
+            });
             break;
           }
         }
@@ -312,7 +426,7 @@ export default function PoopPatrolGame({
         canvas.removeEventListener('pointerdown', handleCanvasClick);
       };
     }
-  }, [mode]);
+  }, [mode, gameWon, gameResetCount]);
 
   // Virtual Controls for Mobile Mower Steering
   const handleVirtualDir = (key, pressed) => {
@@ -325,18 +439,18 @@ export default function PoopPatrolGame({
       <div className="arcade-top-hud">
         <button
           className="btn-action btn-secondary"
-          onClick={() => {
-            AudioFX.playPinSlide();
-            onBack();
-          }}
+          onClick={handleCancelExit}
+          title="Exit and return to puzzle levels"
         >
-          ⬅ Back
+          ✕ Cancel / Exit
         </button>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <div className="arcade-pill">
-            <span>💩 Poops Cleared:</span>
-            <span style={{ color: '#ff4d6d' }}>{poopsCleared}</span>
+            <span>💩 Goal:</span>
+            <span style={{ color: '#ff4d6d' }}>
+              {poopsCleared} / {TOTAL_GOAL_POOPS}
+            </span>
           </div>
           {mode === 'mower' && (
             <div className="arcade-pill">
@@ -354,13 +468,21 @@ export default function PoopPatrolGame({
         <div className="submode-switch">
           <button
             className={`submode-switch-btn ${mode === 'mower' ? 'active' : ''}`}
-            onClick={() => setMode('mower')}
+            onClick={() => {
+              setMode('mower');
+              setGameWon(false);
+              setPoopsCleared(0);
+            }}
           >
             🚜 Ride Mower
           </button>
           <button
             className={`submode-switch-btn ${mode === 'scooper' ? 'active' : ''}`}
-            onClick={() => setMode('scooper')}
+            onClick={() => {
+              setMode('scooper');
+              setGameWon(false);
+              setPoopsCleared(0);
+            }}
           >
             🧹 Hand Scooper
           </button>
@@ -384,34 +506,65 @@ export default function PoopPatrolGame({
           <DogRenderer
             breedId={selectedBreed}
             wardrobe={wardrobe}
-            state="idle"
+            state={gameWon ? 'eating' : 'idle'}
             flip={true}
             size={90}
           />
         </div>
 
         {/* Instruction Footer */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 8,
-            left: 12,
-            background: 'rgba(255,255,255,0.92)',
-            padding: '4px 14px',
-            borderRadius: '16px',
-            fontSize: '0.8rem',
-            fontFamily: 'Fredoka, sans-serif',
-            color: '#444',
-            pointerEvents: 'none',
-          }}
-        >
-          {mode === 'mower'
-            ? '🎮 Desktop: WASD / Arrow Keys to drive. Mobile: Use on-screen D-Pad below!'
-            : '👆 Tap the poops with your scooper to clean up the garden!'}
-        </div>
+        {!gameWon && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              left: 12,
+              background: 'rgba(255,255,255,0.92)',
+              padding: '4px 14px',
+              borderRadius: '16px',
+              fontSize: '0.8rem',
+              fontFamily: 'Fredoka, sans-serif',
+              color: '#444',
+              pointerEvents: 'none',
+            }}
+          >
+            {mode === 'mower'
+              ? '💥 Drive over poops with the lawn mower to EXPLODE them! Clear all 10 to win!'
+              : '👆 Tap the poops with your scooper to clean up all 10!'}
+          </div>
+        )}
+
+        {/* Goal Accomplished / Victory Overlay */}
+        {gameWon && (
+          <div className="victory-overlay">
+            <div className="victory-title">Garden Spotless! 🚜🌻</div>
+            <div className="victory-subtitle">
+              All {TOTAL_GOAL_POOPS} poops exploded and cleared! The backyard is sparkling clean!
+            </div>
+            <div style={{ fontSize: '3rem', margin: '10px 0' }}>🏆✨</div>
+            <div className="victory-stats-card">
+              <div className="victory-stat-row">
+                <span>Poops Cleared:</span>
+                <span style={{ color: '#16a34a' }}>{TOTAL_GOAL_POOPS} / {TOTAL_GOAL_POOPS} (100%)</span>
+              </div>
+              <div className="victory-stat-row">
+                <span>Total Clean Score:</span>
+                <span style={{ color: '#ff4d6d' }}>+{score} pts ⭐</span>
+              </div>
+            </div>
+            <div className="victory-actions">
+              <button className="btn-action btn-primary" onClick={handleRestartGame}>
+                Play Again 🔄
+              </button>
+              <button className="btn-action btn-secondary" onClick={handleCancelExit}>
+                Return to Puzzles 🏠
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Virtual D-Pad for Ride-Along Mower */}
-        {mode === 'mower' && (
+        {mode === 'mower' && !gameWon && (
           <div className="virtual-controls">
             <div className="dpad-container">
               <button

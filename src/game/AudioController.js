@@ -187,6 +187,30 @@ class SoundController {
     osc.stop(t + 0.3);
   }
 
+  // Comical poop explosion sound when run over by mower
+  playPoopExplosion() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(340, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.24);
+
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.28);
+  }
+
   // Poop scooper clean up sound
   playScoop() {
     if (this.muted) return;

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import confetti from 'canvas-confetti';
 import DogRenderer from '../components/DogRenderer';
 import { AudioFX } from '../game/AudioController';
 import '../styles/minigames.css';
@@ -13,7 +14,10 @@ export default function DogParkGame({
   const [score, setScore] = useState(0);
   const [biscuits, setBiscuits] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [gameWon, setGameWon] = useState(false);
+  const [resetCount, setResetCount] = useState(0);
 
+  const GOAL_BISCUITS = 8;
   const canvasRef = useRef(null);
 
   const state = useRef({
@@ -29,11 +33,30 @@ export default function DogParkGame({
 
   const handleJump = () => {
     const s = state.current;
-    if (!s.isJumping && !gameOver) {
+    if (!s.isJumping && !gameOver && !gameWon) {
       s.isJumping = true;
       s.dogVY = -12;
       AudioFX.playBark(1.2);
     }
+  };
+
+  const handleCancelExit = () => {
+    AudioFX.playPinSlide();
+    onBack();
+  };
+
+  const handleRestart = () => {
+    AudioFX.playPinSlide();
+    setGameOver(false);
+    setGameWon(false);
+    setScore(0);
+    setBiscuits(0);
+    state.current.obstacles = [];
+    state.current.biscuits = [];
+    state.current.dogY = 340;
+    state.current.dogVY = 0;
+    state.current.isJumping = false;
+    setResetCount((c) => c + 1);
   };
 
   useEffect(() => {
@@ -84,7 +107,7 @@ export default function DogParkGame({
       // Distant Trees
       ctx.fillStyle = '#86efac';
       for (let i = 0; i < 6; i++) {
-        const treeX = ((i * 120 - (s.distance * 0.5)) % (width + 120)) - 60;
+        const treeX = ((i * 120 - s.distance * 0.5) % (width + 120)) - 60;
         ctx.beginPath();
         ctx.arc(treeX, 310, 45, 0, Math.PI * 2);
         ctx.fill();
@@ -101,7 +124,7 @@ export default function DogParkGame({
       ctx.fillStyle = '#fef08a';
       ctx.fillRect(0, s.groundY + 4, width, 4);
 
-      if (!gameOver) {
+      if (!gameOver && !gameWon) {
         s.distance += s.speed;
 
         // Dog jump physics
@@ -144,7 +167,7 @@ export default function DogParkGame({
       // Move & draw obstacles (Hurdles)
       for (let i = s.obstacles.length - 1; i >= 0; i--) {
         const obs = s.obstacles[i];
-        if (!gameOver) obs.x -= s.speed;
+        if (!gameOver && !gameWon) obs.x -= s.speed;
 
         // Draw Agility Hurdle
         ctx.fillStyle = '#ef4444';
@@ -152,9 +175,11 @@ export default function DogParkGame({
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(obs.x, s.groundY - obs.h + 10, obs.w, 8);
 
-        // Check collision with dog (dog is at x: 110, y: s.dogY)
+        // Check collision with dog
         const dogBox = { x: 110, y: s.dogY - 40, w: 50, h: 50 };
         if (
+          !gameOver &&
+          !gameWon &&
           obs.x < dogBox.x + dogBox.w &&
           obs.x + obs.w > dogBox.x &&
           s.groundY - obs.h < dogBox.y + dogBox.h
@@ -172,7 +197,7 @@ export default function DogParkGame({
       // Move & draw biscuits
       for (let i = s.biscuits.length - 1; i >= 0; i--) {
         const b = s.biscuits[i];
-        if (!gameOver) b.x -= s.speed;
+        if (!gameOver && !gameWon) b.x -= s.speed;
 
         if (!b.collected) {
           // Draw dog biscuit
@@ -186,12 +211,25 @@ export default function DogParkGame({
 
           // Check collect
           const dist = Math.hypot(b.x - 130, b.y - s.dogY);
-          if (dist < 40) {
+          if (dist < 40 && !gameOver && !gameWon) {
             b.collected = true;
             AudioFX.playTreatBonus();
             onAddPoints(25);
             setScore((sc) => sc + 25);
-            setBiscuits((bc) => bc + 1);
+            setBiscuits((prevBiscuits) => {
+              const next = prevBiscuits + 1;
+              if (next >= GOAL_BISCUITS) {
+                // GOAL ACCOMPLISHED!
+                setGameWon(true);
+                AudioFX.playWinFanfare();
+                confetti({
+                  particleCount: 80,
+                  spread: 75,
+                  origin: { y: 0.6 },
+                });
+              }
+              return next;
+            });
           }
         }
 
@@ -209,18 +247,7 @@ export default function DogParkGame({
       cancelAnimationFrame(animId);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [gameOver]);
-
-  const handleRestart = () => {
-    setGameOver(false);
-    setScore(0);
-    setBiscuits(0);
-    state.current.obstacles = [];
-    state.current.biscuits = [];
-    state.current.dogY = 340;
-    state.current.dogVY = 0;
-    state.current.isJumping = false;
-  };
+  }, [gameOver, gameWon, resetCount]);
 
   return (
     <div className="minigame-container">
@@ -228,18 +255,18 @@ export default function DogParkGame({
       <div className="arcade-top-hud">
         <button
           className="btn-action btn-secondary"
-          onClick={() => {
-            AudioFX.playPinSlide();
-            onBack();
-          }}
+          onClick={handleCancelExit}
+          title="Exit and return to puzzle levels"
         >
-          ⬅ Back
+          ✕ Cancel / Exit
         </button>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <div className="arcade-pill">
-            <span>🦴 Biscuits:</span>
-            <span style={{ color: '#ffbe0b' }}>{biscuits}</span>
+            <span>🦴 Goal:</span>
+            <span style={{ color: '#ffbe0b' }}>
+              {biscuits} / {GOAL_BISCUITS} biscuits
+            </span>
           </div>
           <div className="arcade-pill">
             <span>⭐ Score:</span>
@@ -273,48 +300,77 @@ export default function DogParkGame({
           <DogRenderer
             breedId={selectedBreed}
             wardrobe={wardrobe}
-            state={state.current.isJumping ? 'eating' : 'walking'}
+            state={gameWon ? 'eating' : state.current.isJumping ? 'eating' : 'walking'}
             size={110}
           />
         </div>
 
-        {/* Game Over Screen */}
-        {gameOver && (
+        {/* Course Completed Victory Screen */}
+        {gameWon && (
           <div className="victory-overlay">
-            <div className="victory-title">Park Run Finished! 🌳🐾</div>
+            <div className="victory-title">Park Champion! 🌳🏆</div>
             <div className="victory-subtitle">
-              {selectedBreed.toUpperCase()} had a wonderful run at the park!
+              {selectedBreed.toUpperCase()} cleared the course and collected all {GOAL_BISCUITS} biscuits!
+            </div>
+            <div style={{ fontSize: '3rem', margin: '10px 0' }}>🐕✨</div>
+            <div className="victory-stats-card">
+              <div className="victory-stat-row">
+                <span>Biscuits Collected:</span>
+                <span style={{ color: '#ffbe0b' }}>{GOAL_BISCUITS} / {GOAL_BISCUITS} (100%)</span>
+              </div>
+              <div className="victory-stat-row">
+                <span>Total Run Score:</span>
+                <span style={{ color: '#ff4d6d' }}>+{score} pts ⭐</span>
+              </div>
+            </div>
+            <div className="victory-actions">
+              <button className="btn-action btn-primary" onClick={handleRestart}>
+                Run Again 🔄
+              </button>
+              <button className="btn-action btn-secondary" onClick={handleCancelExit}>
+                Return to Puzzles 🏠
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Game Over Screen */}
+        {gameOver && !gameWon && (
+          <div className="victory-overlay">
+            <div className="victory-title" style={{ color: '#e63946' }}>Oops! Tripped on a Hurdle! 🐾</div>
+            <div className="victory-subtitle">
+              {selectedBreed.toUpperCase()} had a fun run! What would you like to do?
             </div>
             <div className="victory-stats-card">
               <div className="victory-stat-row">
                 <span>Biscuits Grabbed:</span>
-                <span style={{ color: '#ffbe0b' }}>{biscuits} (+{biscuits * 25} pts)</span>
+                <span style={{ color: '#ffbe0b' }}>{biscuits} / {GOAL_BISCUITS}</span>
               </div>
               <div className="victory-stat-row">
-                <span>Total Run Score:</span>
+                <span>Score:</span>
                 <span style={{ color: '#ff4d6d' }}>{score} pts</span>
               </div>
             </div>
             <div className="victory-actions">
               <button className="btn-action btn-primary" onClick={handleRestart}>
-                Run Again! 🔄
+                Try Again 🔄
               </button>
-              <button className="btn-action btn-secondary" onClick={onBack}>
-                Main Menu 🏠
+              <button className="btn-action btn-secondary" onClick={handleCancelExit}>
+                Return to Puzzles 🏠
               </button>
             </div>
           </div>
         )}
 
         {/* Touch / Click Hint */}
-        {!gameOver && (
+        {!gameOver && !gameWon && (
           <div
             style={{
               position: 'absolute',
               bottom: 12,
               left: '50%',
               transform: 'translateX(-50%)',
-              background: 'rgba(255,255,255,0.9)',
+              background: 'rgba(255,255,255,0.92)',
               padding: '6px 18px',
               borderRadius: '20px',
               fontSize: '0.85rem',
@@ -324,7 +380,7 @@ export default function DogParkGame({
               pointerEvents: 'none',
             }}
           >
-            👆 Tap screen or press SPACE to jump over hurdles!
+            👆 Tap screen or press SPACE to jump! Grab all {GOAL_BISCUITS} biscuits to win!
           </div>
         )}
       </div>

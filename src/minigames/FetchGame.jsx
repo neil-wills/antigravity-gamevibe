@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import confetti from 'canvas-confetti';
 import DogRenderer from '../components/DogRenderer';
 import { AudioFX } from '../game/AudioController';
 import '../styles/minigames.css';
@@ -10,10 +11,14 @@ export default function FetchGame({
   onAddSteps,
   onBack,
 }) {
-  const canvasRef = useRef(null);
   const [score, setScore] = useState(0);
   const [catches, setCatches] = useState(0);
   const [itemType, setItemType] = useState('ball'); // 'ball' | 'frisbee'
+  const [gameWon, setGameWon] = useState(false);
+  const [resetCount, setResetCount] = useState(0);
+
+  const GOAL_CATCHES = 5;
+  const canvasRef = useRef(null);
 
   const gameState = useRef({
     ball: { x: 80, y: 380, vx: 0, vy: 0, active: false, inAir: false },
@@ -31,6 +36,21 @@ export default function FetchGame({
     hasBall: false,
   });
 
+  const handleRestart = () => {
+    AudioFX.playPinSlide();
+    setScore(0);
+    setCatches(0);
+    setGameWon(false);
+    gameState.current.ball = { x: 80, y: 380, vx: 0, vy: 0, active: false, inAir: false };
+    gameState.current.dog = { x: 70, y: 380, vx: 0, state: 'idle', facing: 1, holdingItem: false };
+    setResetCount((c) => c + 1);
+  };
+
+  const handleCancelExit = () => {
+    AudioFX.playPinSlide();
+    onBack();
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -45,6 +65,7 @@ export default function FetchGame({
     const gs = gameState.current;
 
     const handlePointerDown = (e) => {
+      if (gameWon) return;
       const rect = canvas.getBoundingClientRect();
       const clickX = (e.clientX - rect.left) * (width / rect.width);
       const clickY = (e.clientY - rect.top) * (height / rect.height);
@@ -60,14 +81,14 @@ export default function FetchGame({
     };
 
     const handlePointerMove = (e) => {
-      if (!gs.slingshot.dragging) return;
+      if (!gs.slingshot.dragging || gameWon) return;
       const rect = canvas.getBoundingClientRect();
       gs.slingshot.curX = (e.clientX - rect.left) * (width / rect.width);
       gs.slingshot.curY = (e.clientY - rect.top) * (height / rect.height);
     };
 
     const handlePointerUp = () => {
-      if (!gs.slingshot.dragging) return;
+      if (!gs.slingshot.dragging || gameWon) return;
       gs.slingshot.dragging = false;
 
       // Calculate throw vector
@@ -100,7 +121,7 @@ export default function FetchGame({
     const loop = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Draw Sky & Clouds
+      // Sky & Clouds
       const skyGrad = ctx.createLinearGradient(0, 0, 0, gs.groundY);
       skyGrad.addColorStop(0, '#7dd3fc');
       skyGrad.addColorStop(1, '#e0f2fe');
@@ -129,7 +150,7 @@ export default function FetchGame({
       ctx.fillRect(0, gs.groundY, width, height - gs.groundY);
 
       // Slingshot guide line while aiming
-      if (gs.slingshot.dragging) {
+      if (gs.slingshot.dragging && !gameWon) {
         ctx.strokeStyle = '#ff3366';
         ctx.lineWidth = 3;
         ctx.setLineDash([6, 6]);
@@ -167,7 +188,6 @@ export default function FetchGame({
         ctx.save();
         ctx.translate(gs.ball.x, gs.ball.y);
         if (itemType === 'ball') {
-          // Tennis ball
           ctx.fillStyle = '#ccff00';
           ctx.beginPath();
           ctx.arc(0, 0, 9, 0, Math.PI * 2);
@@ -176,7 +196,6 @@ export default function FetchGame({
           ctx.lineWidth = 1.5;
           ctx.stroke();
         } else {
-          // Frisbee
           ctx.fillStyle = '#ff006e';
           ctx.beginPath();
           ctx.ellipse(0, 0, 16, 6, 0, 0, Math.PI * 2);
@@ -197,7 +216,7 @@ export default function FetchGame({
           }
 
           // Catch check!
-          const dist = Math.hypot(gs.dog.x - gs.ball.x, (gs.dog.y - 20) - gs.ball.y);
+          const dist = Math.hypot(gs.dog.x - gs.ball.x, gs.dog.y - 20 - gs.ball.y);
           if (dist < 32 || (gs.ball.y >= gs.groundY - 10 && Math.abs(gs.dog.x - gs.ball.x) < 25)) {
             // CAUGHT!
             gs.dog.holdingItem = true;
@@ -205,7 +224,20 @@ export default function FetchGame({
             AudioFX.playCatch();
             onAddPoints(50);
             setScore((s) => s + 50);
-            setCatches((c) => c + 1);
+            setCatches((prevCatches) => {
+              const next = prevCatches + 1;
+              if (next >= GOAL_CATCHES) {
+                // GOAL ACCOMPLISHED!
+                setGameWon(true);
+                AudioFX.playWinFanfare();
+                confetti({
+                  particleCount: 80,
+                  spread: 75,
+                  origin: { y: 0.6 },
+                });
+              }
+              return next;
+            });
           }
         }
       }
@@ -222,14 +254,13 @@ export default function FetchGame({
           gs.dog.holdingItem = false;
           gs.dog.state = 'idle';
           gs.dog.facing = 1;
-          AudioFX.playWinFanfare();
         }
       }
 
       // Update React state for DogRenderer
       setDogDisplay({
         x: gs.dog.x,
-        state: gs.dog.state,
+        state: gameWon ? 'eating' : gs.dog.state,
         flip: gs.dog.facing === -1,
         hasBall: gs.dog.holdingItem,
       });
@@ -245,7 +276,7 @@ export default function FetchGame({
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [itemType]);
+  }, [itemType, gameWon, resetCount]);
 
   return (
     <div className="minigame-container">
@@ -253,18 +284,18 @@ export default function FetchGame({
       <div className="arcade-top-hud">
         <button
           className="btn-action btn-secondary"
-          onClick={() => {
-            AudioFX.playPinSlide();
-            onBack();
-          }}
+          onClick={handleCancelExit}
+          title="Exit and return to puzzle levels"
         >
-          ⬅ Back
+          ✕ Cancel / Exit
         </button>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <div className="arcade-pill">
-            <span>🎾 Catches:</span>
-            <span style={{ color: '#ff4d6d' }}>{catches}</span>
+            <span>🎾 Goal:</span>
+            <span style={{ color: '#ff4d6d' }}>
+              {catches} / {GOAL_CATCHES} catches
+            </span>
           </div>
           <div className="arcade-pill">
             <span>⭐ Score:</span>
@@ -313,24 +344,55 @@ export default function FetchGame({
         </div>
 
         {/* Throw Guide Banner */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(255,255,255,0.9)',
-            padding: '6px 18px',
-            borderRadius: '20px',
-            fontSize: '0.88rem',
-            fontFamily: 'Fredoka, sans-serif',
-            fontWeight: 600,
-            color: '#444',
-            pointerEvents: 'none',
-          }}
-        >
-          🎯 Drag on screen and release to throw {itemType === 'ball' ? 'the ball' : 'the frisbee'} for {selectedBreed}!
-        </div>
+        {!gameWon && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(255,255,255,0.92)',
+              padding: '6px 18px',
+              borderRadius: '20px',
+              fontSize: '0.88rem',
+              fontFamily: 'Fredoka, sans-serif',
+              fontWeight: 600,
+              color: '#444',
+              pointerEvents: 'none',
+            }}
+          >
+            🎯 Drag on screen and release to throw {itemType === 'ball' ? 'the ball' : 'the frisbee'}! Complete {GOAL_CATCHES} catches to win!
+          </div>
+        )}
+
+        {/* Victory Overlay when Goal is Accomplished */}
+        {gameWon && (
+          <div className="victory-overlay">
+            <div className="victory-title">Fetch Champion! 🎾🐶</div>
+            <div className="victory-subtitle">
+              {selectedBreed.toUpperCase()} caught all {GOAL_CATCHES} throws with spectacular leaps!
+            </div>
+            <div style={{ fontSize: '3rem', margin: '10px 0' }}>🏆🎾</div>
+            <div className="victory-stats-card">
+              <div className="victory-stat-row">
+                <span>Catches:</span>
+                <span style={{ color: '#16a34a' }}>{GOAL_CATCHES} / {GOAL_CATCHES}</span>
+              </div>
+              <div className="victory-stat-row">
+                <span>Total Points:</span>
+                <span style={{ color: '#ff4d6d' }}>+{score} pts ⭐</span>
+              </div>
+            </div>
+            <div className="victory-actions">
+              <button className="btn-action btn-primary" onClick={handleRestart}>
+                Play Again 🔄
+              </button>
+              <button className="btn-action btn-secondary" onClick={handleCancelExit}>
+                Return to Puzzles 🏠
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
