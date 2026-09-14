@@ -402,3 +402,48 @@ html, body {
   0%, 100% { transform: rotate(-3deg) translateY(0); }
   50% { transform: rotate(3deg) translateY(-6px); }
 }
+
+/* Responsive Rules: Ensure wording never hides or overlaps text on small screens */
+@media (max-width: 600px) {
+  .hud-header {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .hud-left, .hud-right {
+    gap: 5px;
+  }
+  .dog-profile-btn {
+    padding: 4px 8px;
+    max-width: 140px;
+  }
+  .dog-profile-name {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85rem;
+  }
+  .stat-pill {
+    padding: 4px 8px;
+    font-size: 0.82rem;
+    gap: 4px;
+  }
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .hud-header {
+    padding: 4px 8px;
+  }
+  .dog-profile-name {
+    display: none; /* Show dog avatar on very narrow phones to keep score and level text 100% clear */
+  }
+  .stat-pill {
+    padding: 3px 6px;
+    font-size: 0.78rem;
+  }
+}

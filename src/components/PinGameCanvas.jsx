@@ -32,6 +32,18 @@ export default function PinGameCanvas({
   const [poopEvent, setPoopEvent] = useState(null); // null or { x, y }
   const [floatingPoints, setFloatingPoints] = useState([]);
 
+  // Movable Food Bowl State
+  const initialBowlData = (PUZZLE_LEVELS.find((l) => l.id === levelId) || PUZZLE_LEVELS[0]).bowl;
+  const [currentBowlX, setCurrentBowlX] = useState(initialBowlData.x);
+  const bowlPosRef = useRef({
+    x: initialBowlData.x,
+    y: initialBowlData.y,
+    w: initialBowlData.w,
+    h: initialBowlData.h,
+    isHovered: false,
+  });
+  const bowlBodyRef = useRef(null);
+
   // Active pin dragging state
   const dragPinRef = useRef(null);
 
@@ -46,6 +58,14 @@ export default function PinGameCanvas({
     setDogPos({ ...found.dog });
     setPawPrints([]);
     setPoopEvent(null);
+    bowlPosRef.current = {
+      x: found.bowl.x,
+      y: found.bowl.y,
+      w: found.bowl.w,
+      h: found.bowl.h,
+      isHovered: false,
+    };
+    setCurrentBowlX(found.bowl.x);
   }, [levelId, resetCount]);
 
   // Trigger Random Poop Event during puzzle gameplay
@@ -91,6 +111,20 @@ export default function PinGameCanvas({
     }, 1200);
   };
 
+  // Movable Bowl Handler (Arrow keys, on-screen buttons, or mouse drag)
+  const moveBowlBy = (delta) => {
+    const b = bowlPosRef.current;
+    if (!b) return;
+    const minX = b.w / 2 + 10;
+    const maxX = 400 - b.w / 2 - 10;
+    const newX = Math.max(minX, Math.min(maxX, b.x + delta));
+    b.x = newX;
+    setCurrentBowlX(newX);
+    if (bowlBodyRef.current) {
+      Matter.Body.setPosition(bowlBodyRef.current, { x: newX, y: b.y });
+    }
+  };
+
   // Main Matter.js Engine Setup & Render Loop
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -129,18 +163,20 @@ export default function PinGameCanvas({
     wallBodies.push(floor, leftWall, rightWall);
     World.add(world, wallBodies);
 
-    // 2. Create Dog Food Bowl Sensor
+    // 2. Create Dog Food Bowl Sensor (Movable!)
+    const initialBowlPos = bowlPosRef.current;
     const bowl = Bodies.rectangle(
-      levelData.bowl.x,
-      levelData.bowl.y,
-      levelData.bowl.w,
-      levelData.bowl.h,
+      initialBowlPos.x,
+      initialBowlPos.y,
+      initialBowlPos.w,
+      initialBowlPos.h,
       {
         isStatic: true,
         isSensor: true,
         label: 'bowlSensor',
       }
     );
+    bowlBodyRef.current = bowl;
     World.add(world, bowl);
 
     // 3. Create Pins
@@ -301,11 +337,16 @@ export default function PinGameCanvas({
       canvas.style.cursor = 'default';
     };
 
-    // Canvas Pointer Interaction for Pins (Tap to Pull or Drag to Pull)
+    // Canvas Pointer Interaction for Pins & Movable Bowl
     let isDragging = false;
     let dragStartPos = { x: 0, y: 0 };
     let dragStartTime = 0;
     let activePin = null;
+
+    // Movable bowl drag state
+    let isDraggingBowl = false;
+    let dragStartBowlX = initialBowlPos.x;
+    let dragStartBowlPointerX = 0;
 
     const getCanvasCoords = (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -319,6 +360,24 @@ export default function PinGameCanvas({
 
     const handlePointerDown = (e) => {
       const coords = getCanvasCoords(e);
+
+      // 1. Check if user clicked on the movable food bowl
+      const b = bowlPosRef.current;
+      const isBowlHit =
+        coords.x >= b.x - b.w / 2 - 25 &&
+        coords.x <= b.x + b.w / 2 + 25 &&
+        coords.y >= b.y - b.h / 2 - 25 &&
+        coords.y <= b.y + b.h / 2 + 35;
+
+      if (isBowlHit) {
+        isDraggingBowl = true;
+        dragStartBowlX = b.x;
+        dragStartBowlPointerX = coords.x;
+        canvas.style.cursor = 'ew-resize';
+        return;
+      }
+
+      // 2. Check if user clicked on a pin's handle or body
       for (const pinBody of pinObjects) {
         if (checkPinHit(pinBody, coords)) {
           isDragging = true;
@@ -334,7 +393,33 @@ export default function PinGameCanvas({
 
     const handlePointerMove = (e) => {
       const coords = getCanvasCoords(e);
+
+      // Handle dragging the food bowl
+      if (isDraggingBowl) {
+        const deltaX = coords.x - dragStartBowlPointerX;
+        const b = bowlPosRef.current;
+        const minX = b.w / 2 + 10;
+        const maxX = 400 - b.w / 2 - 10;
+        const newX = Math.max(minX, Math.min(maxX, dragStartBowlX + deltaX));
+        b.x = newX;
+        setCurrentBowlX(newX);
+        if (bowlBodyRef.current) {
+          Body.setPosition(bowlBodyRef.current, { x: newX, y: b.y });
+        }
+        canvas.style.cursor = 'ew-resize';
+        return;
+      }
+
+      // When not dragging anything, update hover cursor
       if (!isDragging || !activePin) {
+        const b = bowlPosRef.current;
+        const isHoverBowl =
+          coords.x >= b.x - b.w / 2 - 25 &&
+          coords.x <= b.x + b.w / 2 + 25 &&
+          coords.y >= b.y - b.h / 2 - 25 &&
+          coords.y <= b.y + b.h / 2 + 35;
+        b.isHovered = isHoverBowl;
+
         let anyHover = false;
         for (const pinBody of pinObjects) {
           if (checkPinHit(pinBody, coords)) {
@@ -344,7 +429,14 @@ export default function PinGameCanvas({
             pinBody.customPinData.isHovered = false;
           }
         }
-        canvas.style.cursor = anyHover ? 'pointer' : 'default';
+
+        if (isHoverBowl) {
+          canvas.style.cursor = 'ew-resize';
+        } else if (anyHover) {
+          canvas.style.cursor = 'pointer';
+        } else {
+          canvas.style.cursor = 'default';
+        }
         return;
       }
 
@@ -379,6 +471,11 @@ export default function PinGameCanvas({
     };
 
     const handlePointerUp = (e) => {
+      if (isDraggingBowl) {
+        isDraggingBowl = false;
+        canvas.style.cursor = 'default';
+      }
+
       if (!isDragging || !activePin) return;
       const coords = getCanvasCoords(e);
       const pData = activePin.customPinData;
@@ -401,9 +498,21 @@ export default function PinGameCanvas({
       canvas.style.cursor = 'default';
     };
 
+    // Keyboard support for moving the bowl with arrow keys or A/D
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        moveBowlBy(-25);
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        moveBowlBy(25);
+      }
+    };
+
     canvas.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('keydown', handleKeyDown);
 
     // Animation & Render Loop
     let animId;
@@ -455,36 +564,106 @@ export default function PinGameCanvas({
         ctx.restore();
       });
 
-      // Draw Food Bowl
+      // Draw Movable Food Bowl & Floor Slider Rail
       ctx.save();
-      const bX = levelData.bowl.x;
-      const bY = levelData.bowl.y;
-      const bW = levelData.bowl.w;
-      const bH = levelData.bowl.h;
+      const b = bowlPosRef.current;
+      const bX = b ? b.x : levelData.bowl.x;
+      const bY = b ? b.y : levelData.bowl.y;
+      const bW = b ? b.w : levelData.bowl.w;
+      const bH = b ? b.h : levelData.bowl.h;
 
-      // Bowl rim gradient
+      // 1. Sleek dashed guide track on the floor
+      ctx.save();
+      ctx.strokeStyle = 'rgba(180, 120, 70, 0.45)';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(55, bY + bH / 2 + 8);
+      ctx.lineTo(345, bY + bH / 2 + 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Guide end stoppers
+      ctx.fillStyle = '#8b5a2b';
+      ctx.fillRect(52, bY + bH / 2 + 5, 4, 6);
+      ctx.fillRect(344, bY + bH / 2 + 5, 4, 6);
+
+      // Track helper hint text
+      ctx.fillStyle = 'rgba(100, 60, 20, 0.65)';
+      ctx.font = '700 9.5px Fredoka, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('◀ ━ ━ 🐾 DRAG BOWL TO CATCH FOOD ━ ━ ▶', 200, bY + bH / 2 + 20);
+      ctx.restore();
+
+      // 2. Soft Drop Shadow under bowl
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = '#e11d48';
+      ctx.beginPath();
+      ctx.roundRect(bX - bW / 2, bY - bH / 2, bW, bH, [6, 6, 18, 18]);
+      ctx.fill();
+      ctx.restore();
+
+      // 3. Hover / Active glowing aura
+      if (b && (b.isHovered || isDraggingBowl)) {
+        ctx.save();
+        ctx.shadowColor = '#ff4d6d';
+        ctx.shadowBlur = 16;
+        ctx.strokeStyle = 'rgba(255, 77, 109, 0.85)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(bX - bW / 2 - 3, bY - bH / 2 - 3, bW + 6, bH + 6, [8, 8, 22, 22]);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 4. Ceramic Bowl Body with Rim Gradient
       const bowlGrad = ctx.createLinearGradient(bX - bW / 2, bY, bX + bW / 2, bY);
-      bowlGrad.addColorStop(0, '#ff4d6d');
+      bowlGrad.addColorStop(0, '#e11d48');
+      bowlGrad.addColorStop(0.2, '#ff4d6d');
       bowlGrad.addColorStop(0.5, '#ff758f');
-      bowlGrad.addColorStop(1, '#ff4d6d');
+      bowlGrad.addColorStop(0.8, '#ff4d6d');
+      bowlGrad.addColorStop(1, '#be123c');
 
       ctx.fillStyle = bowlGrad;
       ctx.beginPath();
-      ctx.roundRect(bX - bW / 2, bY - bH / 2, bW, bH, [4, 4, 18, 18]);
+      ctx.roundRect(bX - bW / 2, bY - bH / 2, bW, bH, [6, 6, 18, 18]);
       ctx.fill();
-      ctx.strokeStyle = '#c9184a';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#9f1239';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Dog Paw icon on food bowl
+      // Inner Bowl Rim Specular Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(bX, bY - bH / 2 + 5, bW / 2 - 6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Left & Right Chrome Slider Arrow Grips
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#9f1239';
+      ctx.lineWidth = 1.5;
+      ctx.font = '900 12px Fredoka, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeText('◀', bX - bW / 2 + 13, bY);
+      ctx.fillText('◀', bX - bW / 2 + 13, bY);
+      ctx.strokeText('▶', bX + bW / 2 - 13, bY);
+      ctx.fillText('▶', bX + bW / 2 - 13, bY);
+
+      // Dog Paw icon on food bowl center
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(bX, bY, 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(bX - 6, bY - 6, 2.5, 0, Math.PI * 2);
+      ctx.arc(bX - 5, bY - 6, 2.5, 0, Math.PI * 2);
       ctx.arc(bX, bY - 8, 2.5, 0, Math.PI * 2);
-      ctx.arc(bX + 6, bY - 6, 2.5, 0, Math.PI * 2);
+      ctx.arc(bX + 5, bY - 6, 2.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
@@ -899,6 +1078,7 @@ export default function PinGameCanvas({
       canvas.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [levelData, resetCount]);
 
@@ -914,13 +1094,17 @@ export default function PinGameCanvas({
         origin: { y: 0.6 },
       });
 
-      // Dog walks towards the bowl!
+      // Dog walks towards the bowl wherever it was moved!
       setDogState('walking');
-      const targetX = levelData.bowl.x - 70;
+      const b = bowlPosRef.current;
+      const finalBowlX = b ? b.x : levelData.bowl.x;
+      const targetX = dogPos.x < finalBowlX ? finalBowlX - 65 : finalBowlX + 65;
       let currentX = dogPos.x;
+      const walkDir = targetX > currentX ? 1 : -1;
       const stepInterval = setInterval(() => {
-        if (currentX < targetX) {
-          currentX += 8;
+        const arrived = walkDir > 0 ? currentX >= targetX : currentX <= targetX;
+        if (!arrived) {
+          currentX += walkDir * 8;
           setDogPos((prev) => ({ ...prev, x: currentX }));
           onAddSteps(1);
           onAddPoints(5);
@@ -973,30 +1157,37 @@ export default function PinGameCanvas({
 
   return (
     <div className="puzzle-view">
-      {/* Level Header Bar */}
-      <div className="puzzle-top-bar">
-        <div className="level-badge">
-          <span>Level {levelData.id}: {levelData.name}</span>
-          <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', background: '#e0edff', color: '#1d4ed8' }}>
-            {levelData.difficulty.toUpperCase()}
-          </span>
+      {/* Top Header Card: Level Info + Clean Tutorial Hint (Cleanly outside the canvas!) */}
+      <div className="puzzle-header-card">
+        <div className="puzzle-top-row">
+          <div className="level-badge">
+            <span>Level {levelData.id}: {levelData.name}</span>
+            <span className={`difficulty-tag difficulty-${levelData.difficulty}`}>
+              {levelData.difficulty.toUpperCase()}
+            </span>
+          </div>
+
+          <div className="puzzle-top-actions">
+            <div className="kibble-goal-pill" title="Kibbles fed to puppy">
+              <span>🍖</span>
+              <span>{kibbleInBowl}/{levelData.requiredKibble} Goal</span>
+            </div>
+            <button className="btn-icon btn-sm" onClick={handleRestart} title="Restart Level">
+              🔄
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn-icon" onClick={handleRestart} title="Restart Level">
-            🔄
-          </button>
+        {/* Tutorial Hint Banner - In the header card, NEVER hides any text or canvas! */}
+        <div className="puzzle-tutorial-hint">
+          <span className="hint-icon">💡</span>
+          <span className="hint-text">{levelData.tutorial}</span>
         </div>
       </div>
 
       {/* Physics Arena Board */}
       <div className="puzzle-board-container">
-        {/* Tutorial Banner */}
-        <div style={{ padding: '6px 12px', background: '#fff9e6', borderBottom: '1.5px solid #ffe066', fontSize: '0.8rem', color: '#8c6200', textAlign: 'center', fontWeight: '600' }}>
-          💡 {levelData.tutorial} (Feed: {kibbleInBowl}/{levelData.requiredKibble} kibble)
-        </div>
-
-        {/* Poop Pause Surprise Alert */}
+        {/* Poop Pause Surprise Alert (Floating in upper-mid space, never overlaps tutorial!) */}
         {poopEvent && (
           <div className="poop-alert-container">
             <div className="poop-alert-banner">
@@ -1149,6 +1340,27 @@ export default function PinGameCanvas({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Movable Bowl Control Dock */}
+      <div className="bowl-control-dock">
+        <button
+          className="btn-bowl-arrow"
+          onClick={() => moveBowlBy(-30)}
+          title="Move bowl left (or drag bowl on screen / use Left Arrow)"
+        >
+          ◀ Move Left
+        </button>
+        <div className="bowl-control-info">
+          <span>🥣 Drag Bowl or Use Arrows to Catch Food!</span>
+        </div>
+        <button
+          className="btn-bowl-arrow"
+          onClick={() => moveBowlBy(30)}
+          title="Move bowl right (or drag bowl on screen / use Right Arrow)"
+        >
+          Move Right ▶
+        </button>
       </div>
     </div>
   );
